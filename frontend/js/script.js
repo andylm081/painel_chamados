@@ -1427,6 +1427,45 @@ async function carregarErenderizarAdminUsers(page = 1, sortConfig = currentSortA
     if (!corpoTabelaAdminUsers || !currentUser || currentUser.role !== 'master') return;
     showLoading('corpo-tabela-admin-users');
     currentPageAdminUsers = page; currentSortAdminUsers = sortConfig;
+
+    async function handleEditUserRoleSubmit(event) {
+        event.preventDefault();
+        if (!editUserIdInput || !editUserRoleSelect || !editUserRoleErrorMessage) return;
+    
+        const userId = editUserIdInput.value;
+        const newRole = editUserRoleSelect.value;
+    
+        if (!userId || !newRole) {
+            showToast("Informações do usuário ou papel inválidas.", "error");
+            return;
+        }
+    
+        showLoading();
+        try {
+            const response = await fetch(`${API_URL_ADMIN_USERS}/${userId}/role`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole }),
+                credentials: 'include'
+            });
+            hideLoading();
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || `Erro ao alterar papel: ${response.status}`);
+            }
+            showToast(data.message, 'success');
+            if (modalEditUserRole) modalEditUserRole.style.display = 'none';
+            carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers); // Recarrega a lista de usuários
+        } catch (error) {
+            hideLoading();
+            console.error("Erro ao alterar papel:", error);
+            if (editUserRoleErrorMessage) {
+                editUserRoleErrorMessage.textContent = `Erro: ${error.message}`;
+                editUserRoleErrorMessage.style.display = 'block';
+            }
+            showToast(`Falha ao alterar papel: ${error.message}`, 'error');
+        }
+    }
     // TODO: Adicionar filtros para admin users se necessário e passá-los aqui
 
     // Resetar setas de ordenação (se for por header de tabela)
