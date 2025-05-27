@@ -168,19 +168,18 @@ async function checkAuthStatus() {
     try {
         const response = await fetch(`${AUTH_API_URL}/api/check_auth_status`, { credentials: 'include' });
         const data = await response.json();
-        hideLoading(); 
+        // Não chame hideLoading() aqui diretamente, updateAuthUI fará isso
         if (data.logged_in) {
             currentUser = data.user;
             updateAuthUI(true);
         } else {
             currentUser = null;
-            updateAuthUI(false);
+            updateAuthUI(false); // updateAuthUI chamará hideLoading
         }
     } catch (error) {
-        hideLoading(); 
         console.error("Erro ao verificar auth:", error);
         currentUser = null;
-        updateAuthUI(false);
+        updateAuthUI(false); // updateAuthUI chamará hideLoading
         showToast("Servidor de autenticação indisponível. Tente novamente mais tarde.", "error");
     }
 }
@@ -203,7 +202,6 @@ function updateAuthUI(isLoggedIn) {
         });
         if(navAdminUsersLink) navAdminUsersLink.style.display = currentUser.role === 'master' ? 'list-item' : 'none';
 
-
         const activeLink = document.querySelector('nav ul li a.active');
         if (activeLink) {
             const targetId = activeLink.getAttribute('data-target');
@@ -213,8 +211,11 @@ function updateAuthUI(isLoggedIn) {
             else if (targetId === 'admin-users-section' && currentUser.role === 'master') carregarErenderizarAdminUsers();
         } else { 
             const firstTabLink = document.querySelector('nav ul li a');
-            if (firstTabLink) firstTabLink.click(); 
-            else buscarChamadosPagamento();
+            if (firstTabLink) {
+                firstTabLink.click(); 
+            } else { 
+                buscarChamadosPagamento();
+            }
         }
         carregarFornecedoresGlobais(); 
         setupFilterListeners(); 
@@ -231,6 +232,7 @@ function updateAuthUI(isLoggedIn) {
             if (btnShowRegister && modalRegister) btnShowRegister.addEventListener('click', () => { modalRegister.style.display = 'block'; if (formRegister) formRegister.reset(); if(registerErrorMessage) registerErrorMessage.style.display = 'none'; });
         }
     }
+    hideLoading(); // Chamada única no final de updateAuthUI
 }
 
 async function handleLogin(event) {
@@ -282,7 +284,7 @@ async function carregarFornecedoresGlobais() {
     if(!currentUser) return; 
     try {
         const response = await fetch(API_URL_FORNECEDORES, {credentials: 'include'});
-        if (!response.ok) { // Não lança erro aqui, apenas loga e limpa cache se falhar
+        if (!response.ok) { 
             console.error('Erro ao carregar fornecedores para datalist:', response.status);
             todosFornecedoresCache = [];
         } else {
@@ -375,15 +377,18 @@ function fecharModalNovoEditarFornecedor() {
 
 async function carregarErenderizarFornecedores(page = 1, sortConfig = currentSortForn, filters = currentFiltersForn) {
     if (!corpoTabelaFornecedores || !currentUser) return;
-    showLoading('corpo-tabela-fornecedores');
+    showLoading('corpo-tabela-fornecedores'); // Passa o ID do tbody para mostrar o loading nele
     currentSortForn = sortConfig; currentPageForn = page; currentFiltersForn = filters;
 
+    // Reseta setas de ordenação nos headers da tabela antes de carregar
     if (tabelaFornecedoresHeaders) {
         tabelaFornecedoresHeaders.forEach(th => {
             const arrow = th.querySelector('.sort-arrow');
-            if (arrow) arrow.textContent = ''; 
+            if (arrow) arrow.textContent = ''; // Limpa seta
+             // Remove classe de direção ativa, se houver
             th.classList.remove('sort-asc', 'sort-desc');
         });
+        // Adiciona seta e classe ao header atualmente ordenado
         const activeTh = document.querySelector(`#tabela-fornecedores th[data-sortkey="${currentSortForn.key}"]`);
         if (activeTh) {
             const arrowSpan = activeTh.querySelector('.sort-arrow');
@@ -397,7 +402,7 @@ async function carregarErenderizarFornecedores(page = 1, sortConfig = currentSor
         hideLoading();
         if (!response.ok) throw new Error('Erro ao buscar fornecedores.');
         let fornecedoresDaApi = await response.json();
-        todosFornecedoresCache = fornecedoresDaApi; 
+        todosFornecedoresCache = fornecedoresDaApi; // Atualiza cache completo
         
         let itemsParaFiltrarEOrdenar = [...todosFornecedoresCache]; 
         itemsParaFiltrarEOrdenar = aplicarFiltros(itemsParaFiltrarEOrdenar, currentFiltersForn, 'fornecedor');
@@ -420,7 +425,7 @@ function renderizarTabelaFornecedores(fornecedores, page = 1) {
     const paginatedItems = fornecedores.slice(start, end);
 
     if (paginatedItems.length === 0) {
-        const colunas = (currentUser && currentUser.role === 'master' ? 1 : 0) + 4;
+        const colunas = (currentUser && currentUser.role === 'master' ? 1 : 0) + 4; // 4 base + 1 se master
         corpoTabelaFornecedores.innerHTML = `<tr><td colspan="${colunas}"><p class="empty-state-message">Nenhum fornecedor encontrado ${Object.keys(currentFiltersForn).length > 0 ? 'para os filtros aplicados' : ''}.</p></td></tr>`;
     } else {
         paginatedItems.forEach(f => {
@@ -486,7 +491,7 @@ if (corpoTabelaFornecedores) {
         const targetLink = event.target.closest('a.supplier-name-link');
 
         if (targetButton) {
-            event.preventDefault(); // Previne qualquer ação padrão do botão se ele estiver dentro de um form, etc.
+            event.preventDefault(); 
             const fornecedorId = targetButton.dataset.id;
             if (!fornecedorId) return;
 
@@ -502,13 +507,14 @@ if (corpoTabelaFornecedores) {
                         if (!response.ok) { throw new Error(data.message || `Erro ao excluir fornecedor: ${response.status}`); }
                         showToast('Fornecedor excluído com sucesso!', 'success');
                         
-                        // Recalcula a página atual se necessário
-                        const totalItemsAposExclusao = todosFornecedoresCache.length - 1; // Assumindo que o cache será atualizado
+                        const totalItemsAposExclusao = todosFornecedoresCache.length - 1; 
                         const totalPagesAposExclusao = Math.ceil(totalItemsAposExclusao / ITEMS_PER_PAGE_TABLE);
                         let paginaAlvo = currentPageForn;
                         if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
                             paginaAlvo = totalPagesAposExclusao;
-                        } else if (totalItemsAposExclusao === 0) {
+                        } else if (totalItemsAposExclusao === 0 && currentPageForn > 1) { // Se excluiu o último item de uma página > 1
+                            paginaAlvo = Math.max(1, currentPageForn -1);
+                        } else if (totalItemsAposExclusao === 0){
                              paginaAlvo = 1;
                         }
                         carregarErenderizarFornecedores(paginaAlvo, currentSortForn, currentFiltersForn);
@@ -533,7 +539,7 @@ if (corpoTabelaFornecedores) {
                         filtroFornPag.value = supplierName;
                         filtroFornPag.dispatchEvent(new Event('input', { bubbles: true })); 
                     }
-                }, 150); // Aumentei o delay para dar mais tempo para a mudança de aba
+                }, 150); 
             }
             showToast(`Filtrando chamados de pagamento por: ${supplierName}`, 'info');
         }
@@ -551,13 +557,12 @@ function abrirModalRegistrarChamadoPag() {
         inputNumIdFornecedorChamadoPag.value = '';
         inputNumIdFornecedorChamadoPag.readOnly = false;
     }
-    if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = ''; // Limpa o nome do fornecedor também
+    if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = '';
     if (modalChamadoPagErrorMessage) modalChamadoPagErrorMessage.style.display = 'none';
     
-    // Garante que a lista de fornecedores (datalist) esteja carregada/atualizada
-    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor, 
-    // então geralmente estará atualizado. Se quiser forçar:
-    // await carregarFornecedoresGlobais(); // Mas isso tornaria esta função async
+    // A função carregarFornecedoresGlobais() já deve ter populado o datalistFornecedores
+    // Se for necessário recarregar a cada abertura de modal:
+    // carregarFornecedoresGlobais(); 
     
     if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'block';
 }
@@ -578,7 +583,7 @@ async function abrirModalEditarChamadoPag(chamadoId) {
         if (modalChamadoPagTitulo) modalChamadoPagTitulo.textContent = 'Editar Registro de Chamado de Pagamento';
         if (inputChamadoPagIdEdicao) inputChamadoPagIdEdicao.value = chamado.id;
 
-        await carregarFornecedoresGlobais(); // Garante que a lista está atualizada
+        // await carregarFornecedoresGlobais(); // Garante que a lista está atualizada, mas pode ser redundante se já carregada
 
         if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = chamado.nome_fornecedor || '';
         if (inputHiddenFornecedorIdChamadoPag) inputHiddenFornecedorIdChamadoPag.value = chamado.fornecedor_id || '';
@@ -587,18 +592,17 @@ async function abrirModalEditarChamadoPag(chamadoId) {
             inputNumIdFornecedorChamadoPag.readOnly = !!chamado.fornecedor_id; 
         }
         
-        const form = formRegistrarEditarChamadoPag;
+        const form = formRegistrarEditarChamadoPag; // Garante que está se referindo ao formulário correto
         if(form) {
-            // Usando os IDs corretos dos inputs conforme definido no HTML para o modal _pag
-            form.numero_chamado_origem_pag.value = chamado.numero_chamado_origem || '';
-            form.numero_fatura_pag.value = chamado.numero_fatura || '';
-            form.lancamento_pag.value = chamado.lancamento || '';
-            form.valor_pag.value = chamado.valor || '';
-            form.data_escrituracao_pag.value = formatDateForInput(chamado.data_escrituracao);
-            form.prazo_maximo_escrituracao_pag.value = formatDateForInput(chamado.prazo_maximo_escrituracao);
-            form.data_vencimento_pag.value = formatDateForInput(chamado.data_vencimento);
-            form.situacao_pag.value = chamado.situacao || 'Pendente';
-            form.observacoes_gerais_pag.value = chamado.observacoes_gerais || '';
+            if(form.numero_chamado_origem_pag) form.numero_chamado_origem_pag.value = chamado.numero_chamado_origem || '';
+            if(form.numero_fatura_pag) form.numero_fatura_pag.value = chamado.numero_fatura || '';
+            if(form.lancamento_pag) form.lancamento_pag.value = chamado.lancamento || '';
+            if(form.valor_pag) form.valor_pag.value = chamado.valor || '';
+            if(form.data_escrituracao_pag) form.data_escrituracao_pag.value = formatDateForInput(chamado.data_escrituracao);
+            if(form.prazo_maximo_escrituracao_pag) form.prazo_maximo_escrituracao_pag.value = formatDateForInput(chamado.prazo_maximo_escrituracao);
+            if(form.data_vencimento_pag) form.data_vencimento_pag.value = formatDateForInput(chamado.data_vencimento);
+            if(form.situacao_pag) form.situacao_pag.value = chamado.situacao || 'Pendente';
+            if(form.observacoes_gerais_pag) form.observacoes_gerais_pag.value = chamado.observacoes_gerais || '';
         }
 
         if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'block';
@@ -619,7 +623,7 @@ if (formRegistrarEditarChamadoPag) {
         event.preventDefault();
         if (modalChamadoPagErrorMessage) modalChamadoPagErrorMessage.style.display = 'none';
         
-        const form = formRegistrarEditarChamadoPag; // Referência direta ao formulário
+        const form = formRegistrarEditarChamadoPag; 
         const chamadoData = {
             numero_chamado_origem: form.numero_chamado_origem_pag.value,
             numero_fatura: form.numero_fatura_pag.value,
@@ -809,7 +813,7 @@ function abrirModalRegistrarChamadoDiv() {
     }
     if(inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = '';
     if (modalChamadoDivErrorMessage) modalChamadoDivErrorMessage.style.display = 'none';
-    carregarFornecedoresGlobais(); // Garante que o datalist está atualizado
+    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor
     if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
 }
 
@@ -820,13 +824,16 @@ async function abrirModalEditarChamadoDiv(chamadoId) {
     try {
         const response = await fetch(`${API_URL_DIVERSOS}/${chamadoId}`, { credentials: 'include' });
         hideLoading();
-        if (!response.ok) throw new Error('Erro ao buscar dados do chamado diverso para edição.');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: "Erro ao buscar dados do chamado."}));
+            throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+        }
         const chamado = await response.json();
 
         if (modalChamadoDivTitulo) modalChamadoDivTitulo.textContent = 'Editar Registro de Chamado Diverso';
         if (inputChamadoDivIdEdicao) inputChamadoDivIdEdicao.value = chamado.id;
 
-        await carregarFornecedoresGlobais();
+        // await carregarFornecedoresGlobais(); // Garante que datalist está atualizado
 
         if (inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = chamado.nome_fornecedor || '';
         if (inputHiddenFornecedorIdChamadoDiv) inputHiddenFornecedorIdChamadoDiv.value = chamado.fornecedor_id || '';
@@ -938,13 +945,13 @@ async function abrirModalAcompanhamentosChamadoDiv(chamadoId) {
 
         acompanhamentosChamadoDivTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
         let fornecedorInfoHtml = '';
-        if (chamado.fornecedor_id) {
+        if (chamado.fornecedor_id) { // Só mostra seção do fornecedor se existir
             fornecedorInfoHtml = `<p><strong>Fornecedor:</strong> ${chamado.nome_fornecedor || 'N/A'} (ID: ${chamado.fornecedor_id})</p>
                                   <p><strong>N° ID Fornecedor:</strong> ${chamado.numero_identificacao_fornecedor || 'N/A'}</p>`;
         }
         let valorInfoHtml = '';
-        if (chamado.valor !== null && chamado.valor !== undefined) {
-            valorInfoHtml = `<p><strong>Valor:</strong> R$ ${chamado.valor.toFixed(2)}</p>`;
+        if (chamado.valor !== null && chamado.valor !== undefined) { // Só mostra valor se existir
+            valorInfoHtml = `<p><strong>Valor:</strong> R$ ${chamado.valor.toFixed(2).replace('.', ',')}</p>`;
         }
         acompanhamentosChamadoDivInfo.innerHTML = `
             <p><strong>ID do Chamado:</strong> ${chamado.id}</p>
@@ -1009,7 +1016,7 @@ if (formNovoAcompanhamentoDiv) {
             if (!response.ok) {
                 throw new Error(responseData.message || `Erro ao adicionar acompanhamento: ${response.status}`);
             }
-            abrirModalAcompanhamentosChamadoDiv(chamadoId); // Recarrega o modal
+            abrirModalAcompanhamentosChamadoDiv(chamadoId); 
             showToast('Acompanhamento adicionado com sucesso!', 'success');
         } catch (error) {
             hideLoading();
@@ -1018,6 +1025,7 @@ if (formNovoAcompanhamentoDiv) {
         }
     });
 }
+
 
 // --- BUSCAR E RENDERIZAR CHAMADOS DIVERSOS ---
 async function buscarChamadosDiversos(page = 1, sortOption = currentSortDiv, filters = currentFiltersDiv) {
@@ -1056,8 +1064,8 @@ function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, cu
     const paginatedItems = chamados.slice(start, end);
 
     if (paginatedItems.length === 0) {
-        let tipoFiltro = tipoChamadoSlug === 'pag' ? currentFiltersPag : currentFiltersDiv;
-        let temFiltroAtivo = Object.keys(tipoFiltro).length > 0;
+        let currentFilters = tipoChamadoSlug === 'pag' ? currentFiltersPag : currentFiltersDiv;
+        let temFiltroAtivo = Object.keys(currentFilters).length > 0;
         setListMessage(containerElement, `Nenhum chamado ${tipoChamadoSlug === 'pag' ? 'de pagamento' : 'diverso'} encontrado ${temFiltroAtivo ? 'para os filtros aplicados' : ''}.`);
     } else {
         paginatedItems.forEach(chamado => {
@@ -1110,12 +1118,10 @@ function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, cu
     }
 
     const paginationContainerId = tipoChamadoSlug === 'pag' ? 'pagination-chamados-pag' : 'pagination-chamados-div';
-    
-    // A função de callback para paginação agora precisa passar os filtros e ordenação atuais
     const paginationCallback = (newPage) => {
         if (tipoChamadoSlug === 'pag') {
             buscarChamadosPagamento(newPage, currentSortPag, currentFiltersPag);
-        } else { // 'div'
+        } else { 
             buscarChamadosDiversos(newPage, currentSortDiv, currentFiltersDiv);
         }
     };
@@ -1127,7 +1133,7 @@ function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, cu
 document.querySelectorAll('.chamados-grid').forEach(grid => {
     grid.addEventListener('click', async (event) => {
         const targetButton = event.target.closest('button');
-        const targetLink = event.target.closest('a.supplier-name-link'); // Para clique no nome do fornecedor dentro do card
+        const targetLink = event.target.closest('a.supplier-name-link');
 
         if (targetButton) {
             const chamadoId = targetButton.dataset.id;
@@ -1167,6 +1173,7 @@ document.querySelectorAll('.chamados-grid').forEach(grid => {
              event.preventDefault();
             const supplierName = targetLink.dataset.supplierName;
             const pagTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
+            // Prioriza filtrar na aba de pagamentos, mas poderia ser a aba ativa se quiséssemos mais complexidade
             if (pagTabLink) {
                 pagTabLink.click();
                 setTimeout(() => { 
@@ -1192,6 +1199,7 @@ function setupFilterListeners() {
             if (listId === 'lista-chamados-pagamento') { currentPagePag = 1; buscarChamadosPagamento(1, currentSortPag, filters); }
             else if (listId === 'lista-chamados-diversos') { currentPageDiv = 1; buscarChamadosDiversos(1, currentSortDiv, filters); }
             else if (listId === 'corpo-tabela-fornecedores') { currentPageForn = 1; carregarErenderizarFornecedores(1, currentSortForn, filters); }
+            else if (listId === 'corpo-tabela-admin-users') { currentPageAdminUsers = 1; carregarErenderizarAdminUsers(1, currentSortAdminUsers, filters); }
         });
     });
 }
@@ -1206,6 +1214,7 @@ function collectFiltersForList(listId) {
     if (listId === 'lista-chamados-pagamento') currentFiltersPag = filters;
     else if (listId === 'lista-chamados-diversos') currentFiltersDiv = filters;
     else if (listId === 'corpo-tabela-fornecedores') currentFiltersForn = filters;
+    else if (listId === 'corpo-tabela-admin-users') currentFiltersAdminUsers = filters;
     return filters;
 }
 
@@ -1223,6 +1232,10 @@ function aplicarFiltros(items, filters, itemType) {
                  itemVal = String(item.numero_identificacao_fornecedor).toLowerCase().trim();
             } else if (fieldKey === 'owner_username' && item.owner_username) {
                 itemVal = String(item.owner_username).toLowerCase().trim();
+            } else if (fieldKey === 'username' && item.username) { // Para filtro de usuários admin
+                itemVal = String(item.username).toLowerCase().trim();
+            } else if (fieldKey === 'email' && item.email) { // Para filtro de usuários admin
+                 itemVal = String(item.email).toLowerCase().trim();
             } else if (item[fieldKey]) { 
                 itemVal = String(item[fieldKey]).toLowerCase().trim();
             }
@@ -1243,7 +1256,11 @@ function aplicarOrdenacao(items, sortOption) {
         direction = sortOption.direction;
     } else if (typeof sortOption === 'string' && sortOption.includes('_')) { 
         [key, direction] = sortOption.split('_');
-    } else {
+    } else if (typeof sortOption === 'string') { // Caso seja só a chave (default asc)
+        key = sortOption;
+        direction = 'asc';
+    }
+     else {
         return items; 
     }
     
@@ -1255,8 +1272,9 @@ function aplicarOrdenacao(items, sortOption) {
 
         if(key === 'nome_fornecedor' && a.fornecedor_obj) valA = a.fornecedor_obj.nome_fornecedor;
         if(key === 'nome_fornecedor' && b.fornecedor_obj) valB = b.fornecedor_obj.nome_fornecedor;
-        if(key === 'owner_username' && a.owner) valA = a.owner.username; // Supondo que 'owner' é o backref no modelo de dados
+        if(key === 'owner_username' && a.owner) valA = a.owner.username; 
         if(key === 'owner_username' && b.owner) valB = b.owner.username;
+
 
         if (key.startsWith('data_') && valA && valB) {
             valA = new Date(valA);
@@ -1277,23 +1295,34 @@ function aplicarOrdenacao(items, sortOption) {
 function setupSortListeners() {
     if (sortChamadoPagSelect) sortChamadoPagSelect.addEventListener('change', (e) => buscarChamadosPagamento(1, e.target.value, currentFiltersPag));
     if (sortChamadoDivSelect) sortChamadoDivSelect.addEventListener('change', (e) => buscarChamadosDiversos(1, e.target.value, currentFiltersDiv));
-    if (tabelaFornecedoresHeaders) {
-        tabelaFornecedoresHeaders.forEach(th => {
-            th.addEventListener('click', () => {
-                const sortKey = th.dataset.sortkey; if (!sortKey) return;
-                const newDirection = (currentSortForn.key === sortKey && currentSortForn.direction === 'asc') ? 'desc' : 'asc';
-                currentSortForn = { key: sortKey, direction: newDirection };
-                tabelaFornecedoresHeaders.forEach(h => { const arrow = h.querySelector('.sort-arrow'); if (arrow) arrow.textContent = ''; h.classList.remove('sort-asc', 'sort-desc');});
-                const arrowSpan = th.querySelector('.sort-arrow'); if (arrowSpan) arrowSpan.textContent = newDirection === 'asc' ? ' ▲' : ' ▼';
-                th.classList.add(newDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-                carregarErenderizarFornecedores(1, currentSortForn, currentFiltersForn);
+    
+    const configureTableSort = (headers, sortStateVar, fetchFn, filtersVar, paginationVar) => {
+        if(headers) {
+            headers.forEach(th => {
+                th.addEventListener('click', () => {
+                    const sortKey = th.dataset.sortkey; if (!sortKey) return;
+                    const newDirection = (sortStateVar.key === sortKey && sortStateVar.direction === 'asc') ? 'desc' : 'asc';
+                    sortStateVar.key = sortKey;
+                    sortStateVar.direction = newDirection;
+                    
+                    headers.forEach(h => { const arrow = h.querySelector('.sort-arrow'); if (arrow) arrow.textContent = ''; h.classList.remove('sort-asc', 'sort-desc');});
+                    const arrowSpan = th.querySelector('.sort-arrow'); if (arrowSpan) arrowSpan.textContent = newDirection === 'asc' ? ' ▲' : ' ▼';
+                    th.classList.add(newDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                    
+                    fetchFn(1, sortStateVar, filtersVar);
+                });
             });
-        });
-    }
+        }
+    };
+    configureTableSort(tabelaFornecedoresHeaders, currentSortForn, carregarErenderizarFornecedores, currentFiltersForn, currentPageForn);
+    // Futuramente, configurar para tabela de admin users
+    // const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
+    // configureTableSort(adminUsersTableHeaders, currentSortAdminUsers, carregarErenderizarAdminUsers, currentFiltersAdminUsers, currentPageAdminUsers);
+
 }
 
 // --- LÓGICA DE PAGINAÇÃO ---
-function setupPagination(totalItems, itemsPerPage, currentPage, paginationContainerId, fetchFunctionWithPage) {
+function setupPagination(totalItems, itemsPerPage, currentPage, paginationContainerId, fetchFunctionForPageAndSortAndFilter) {
     const paginationContainer = document.getElementById(paginationContainerId);
     if (!paginationContainer) return;
     paginationContainer.innerHTML = '';
@@ -1307,16 +1336,17 @@ function setupPagination(totalItems, itemsPerPage, currentPage, paginationContai
         button.className = 'btn btn-sm';
         button.classList.add(isActive ? 'btn-primary' : 'btn-secondary');
         button.disabled = isDisabled;
-        button.addEventListener('click', () => fetchFunctionWithPage(pageNumber));
+        button.addEventListener('click', () => fetchFunctionWithPageAndSortAndFilter(pageNumber)); // Ajustado para não passar sort e filter aqui, pois já estarão no estado global
         return button;
     };
 
     paginationContainer.appendChild(createPageButton(currentPage - 1, 'Anterior', currentPage === 1));
 
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, currentPage + 2);
-    if (currentPage <= 3) endPage = Math.min(5, totalPages);
-    if (currentPage > totalPages - 3) startPage = Math.max(1, totalPages - 4);
+    let startPage = Math.max(1, currentPage - 1); // Mostrar menos números, mais simples
+    let endPage = Math.min(totalPages, currentPage + 1);
+
+    if (currentPage === 1 && totalPages > 1) endPage = Math.min(3, totalPages);
+    if (currentPage === totalPages && totalPages > 1) startPage = Math.max(1, totalPages - 2);
     
     if (startPage > 1) {
         paginationContainer.appendChild(createPageButton(1, '1'));
@@ -1339,11 +1369,12 @@ if (navLinks && contentSections) {
         link.addEventListener('click', (event) => {
             event.preventDefault();
             if (!currentUser && link.dataset.target !== 'admin-users-section' && link.dataset.target !== 'fornecedores-section' && link.dataset.target !== 'chamados-diversos-section' && link.dataset.target !== 'chamados-pagamento-section'  ) { 
-                // Se não estiver logado, permite apenas se não for uma aba protegida (nenhuma é, exceto admin)
-                // Mas se o conteúdo principal está escondido, essa checagem não faz muito. O importante é o checkAuthStatus.
-            }
-            if (!currentUser && (link.dataset.target === 'chamados-pagamento-section' || link.dataset.target === 'chamados-diversos-section' || link.dataset.target === 'fornecedores-section' || link.dataset.target === 'admin-users-section')) {
+                // Nenhuma ação se não for uma aba de app e não estiver logado
+            } else if (!currentUser && (link.dataset.target !== 'admin-users-section' || (link.dataset.target === 'admin-users-section' && (!currentUser || currentUser.role !== 'master')))) {
                  showToast("Por favor, faça login para acessar esta área.", "error"); return;
+            }
+            if (link.dataset.target === 'admin-users-section' && (!currentUser || currentUser.role !== 'master')) {
+                 showToast("Acesso restrito a administradores.", "error"); return;
             }
 
 
@@ -1364,7 +1395,8 @@ if (navLinks && contentSections) {
                 currentSortForn = {key:'nome_fornecedor', direction:'asc'};
                 currentSortAdminUsers = {key:'username', direction:'asc'};
                 if(tabelaFornecedoresHeaders) tabelaFornecedoresHeaders.forEach(h => {const arrow = h.querySelector('.sort-arrow'); if(arrow) arrow.textContent = ''; h.classList.remove('sort-asc','sort-desc');});
-                // Adicionar reset similar para tabela de admin users se ela tiver ordenação por header
+                const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
+                if(adminUsersTableHeaders) adminUsersTableHeaders.forEach(h => {const arrow = h.querySelector('.sort-arrow'); if(arrow) arrow.textContent = ''; h.classList.remove('sort-asc','sort-desc');});
 
 
                 if (targetId === 'chamados-pagamento-section') buscarChamadosPagamento();
@@ -1408,65 +1440,50 @@ function setupGlobalEventListeners() {
     if (btnCancelarModalFornecedor) btnCancelarModalFornecedor.addEventListener('click', fecharModalNovoEditarFornecedor);
 
     if(formEditUserRole) formEditUserRole.addEventListener('submit', handleEditUserRoleSubmit);
-    if(btnCloseModalEditUserRole) btnCloseModalEditUserRole.addEventListener('click', () => modalEditUserRole.style.display = 'none');
-    if(btnCancelEditUserRole) btnCancelEditUserRole.addEventListener('click', () => modalEditUserRole.style.display = 'none');
-
+    if(btnCloseModalEditUserRole) btnCloseModalEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none';});
+    if(btnCancelEditUserRole) btnCancelEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none';});
 }
 
 function init() {
     if (currentYearSpan) currentYearSpan.textContent = new Date().getFullYear();
     checkAuthStatus(); 
     setupGlobalEventListeners(); 
-    // setupFilterListeners e setupSortListeners são chamados DENTRO de updateAuthUI quando o usuário está logado.
+    setupFornecedorInput(inputNomeFornecedorChamadoPag, inputHiddenFornecedorIdChamadoPag, inputNumIdFornecedorChamadoPag, datalistFornecedores);
+    setupFornecedorInput(inputNomeFornecedorChamadoDiv, inputHiddenFornecedorIdChamadoDiv, inputNumIdFornecedorChamadoDiv, datalistFornecedoresDiv);
 }
 
 document.addEventListener('DOMContentLoaded', init);
 
-// --- ADMIN USER MANAGEMENT --- (NOVO)
-async function carregarErenderizarAdminUsers(page = 1, sortConfig = currentSortAdminUsers) { // ADICIONADO ASYNC AQUI
-    if (!corpoTabelaAdminUsers || !currentUser || currentUser.role !== 'master') {
-        // Se a aba for acessada por um não-master (improvável se a UI estiver correta), limpa a tabela.
-        if(corpoTabelaAdminUsers) corpoTabelaAdminUsers.innerHTML = '<tr><td colspan="5"><p class="empty-state-message">Acesso não autorizado.</p></td></tr>';
-        return;
-    }
+// --- ADMIN USER MANAGEMENT ---
+async function carregarErenderizarAdminUsers(page = 1, sortConfig = currentSortAdminUsers, filters = currentFiltersAdminUsers ) {
+    if (!corpoTabelaAdminUsers || !currentUser || currentUser.role !== 'master') return;
     showLoading('corpo-tabela-admin-users');
-    currentPageAdminUsers = page; 
-    currentSortAdminUsers = sortConfig;
-    // Lembre-se de implementar a coleta de filtros para admin users se você adicionar inputs de filtro para esta tabela
-    // currentFiltersAdminUsers = collectFiltersForList('corpo-tabela-admin-users'); 
+    currentPageAdminUsers = page; currentSortAdminUsers = sortConfig; currentFiltersAdminUsers = filters;
 
-    // Resetar setas de ordenação (se for por header de tabela)
     const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
     if (adminUsersTableHeaders) {
         adminUsersTableHeaders.forEach(th => {
-            const arrow = th.querySelector('.sort-arrow');
-            if (arrow) arrow.textContent = ''; 
+            const arrow = th.querySelector('.sort-arrow'); if (arrow) arrow.textContent = ''; 
             th.classList.remove('sort-asc', 'sort-desc');
         });
         const activeTh = document.querySelector(`#tabela-admin-users th[data-sortkey="${currentSortAdminUsers.key}"]`);
-        if (activeTh) {
-            const arrowSpan = activeTh.querySelector('.sort-arrow');
-            if (arrowSpan) arrowSpan.textContent = currentSortAdminUsers.direction === 'asc' ? ' ▲' : ' ▼';
+        if (activeTh) { const arrowSpan = activeTh.querySelector('.sort-arrow'); if (arrowSpan) arrowSpan.textContent = currentSortAdminUsers.direction === 'asc' ? ' ▲' : ' ▼';
             activeTh.classList.add(currentSortAdminUsers.direction === 'asc' ? 'sort-asc' : 'sort-desc');
         }
     }
 
     try {
         const response = await fetch(API_URL_ADMIN_USERS, {credentials: 'include'});
-        hideLoading(); // Movido para depois do fetch, mas antes de processar a resposta
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({message: `Erro HTTP ${response.status}`}));
-            throw new Error(errorData.message || 'Erro ao buscar usuários.');
-        }
+        hideLoading();
+        if (!response.ok) throw new Error('Erro ao buscar usuários.');
         todosUsuariosCache = await response.json();
         
-        let itemsToRender = aplicarFiltros(todosUsuariosCache, {} /* substitua {} pelos filtros de admin users se tiver */, 'user_admin'); 
+        let itemsToRender = aplicarFiltros(todosUsuariosCache, currentFiltersAdminUsers, 'user_admin'); 
         itemsToRender = aplicarOrdenacao(itemsToRender, currentSortAdminUsers.key ? `${currentSortAdminUsers.key}_${currentSortAdminUsers.direction}` : currentSortAdminUsers);
         
         renderizarTabelaAdminUsers(itemsToRender, currentPageAdminUsers);
     } catch(e) {
-        hideLoading(); // Garante que esconde em caso de erro também
-        console.error("Erro ao carregar usuários admin:", e);
+        hideLoading(); console.error("Erro ao carregar usuários admin:", e);
         setListMessage(corpoTabelaAdminUsers, `Erro ao carregar usuários: ${e.message}`);
         showToast(`Erro ao carregar usuários: ${e.message}`, 'error');
     }
@@ -1490,16 +1507,17 @@ function renderizarTabelaAdminUsers(users, page = 1) {
                 <td data-label="Email">${user.email}</td>
                 <td data-label="Papel">${user.role}</td>
                 <td class="actions-user">
-                    ${user.id !== currentUser.id ? // Master não pode editar/deletar a si mesmo por aqui
+                    ${user.id !== currentUser.id ? 
                     `<button class="btn btn-sm btn-warning btn-edit-user-role" data-id="${user.id}" data-username="${user.username}" data-role="${user.role}" title="Editar Papel">Editar Papel</button>
                      <button class="btn btn-sm btn-danger btn-delete-user" data-id="${user.id}" data-username="${user.username}" title="Deletar Usuário">Deletar</button>`
-                    : 'N/A'}
+                    : 'N/A (Você Mesmo)'}
                 </td>
             `;
             corpoTabelaAdminUsers.appendChild(tr);
         });
     }
-    // setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers)); // Adicionar div de paginação no HTML se quiser
+    // setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)); 
+    // Você precisará adicionar <div class="pagination-controls" id="pagination-admin-users"></div> no HTML para esta tabela de admin se quiser paginação nela.
 }
 
 if (corpoTabelaAdminUsers) {
@@ -1524,10 +1542,9 @@ if (corpoTabelaAdminUsers) {
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.message || `Erro ao deletar usuário: ${response.status}`);
                     showToast(data.message, 'success');
-                    carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers); // Recarrega lista
+                    carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers, currentFiltersAdminUsers); // Recarrega lista
                 } catch (error) {
-                    hideLoading();
-                    console.error("Erro ao deletar usuário:", error);
+                    hideLoading(); console.error("Erro ao deletar usuário:", error);
                     showToast(`Falha ao deletar usuário: ${error.message}`, 'error');
                 }
             }
@@ -1535,34 +1552,27 @@ if (corpoTabelaAdminUsers) {
     });
 }
 
-if (formEditUserRole) {
-    formEditUserRole.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const userId = editUserIdInput.value;
-        const newRole = editUserRoleSelect.value;
-        if (!userId || !newRole) {
-            showToast("Informações do usuário ou papel inválidas.", "error");
-            return;
-        }
-        showLoading();
-        try {
-            const response = await fetch(`${API_URL_ADMIN_USERS}/${userId}/role`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role: newRole }),
-                credentials: 'include'
-            });
-            hideLoading();
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || `Erro ao alterar papel: ${response.status}`);
-            showToast(data.message, 'success');
-            if(modalEditUserRole) modalEditUserRole.style.display = 'none';
-            carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers);
-        } catch (error) {
-            hideLoading();
-            console.error("Erro ao alterar papel:", error);
-            if(editUserRoleErrorMessage) {editUserRoleErrorMessage.textContent = error.message; editUserRoleErrorMessage.style.display = 'block';}
-            showToast(`Falha ao alterar papel: ${error.message}`, 'error');
-        }
-    });
+async function handleEditUserRoleSubmit(event) {
+    event.preventDefault();
+    if (!editUserIdInput || !editUserRoleSelect || !editUserRoleErrorMessage) return;
+    const userId = editUserIdInput.value;
+    const newRole = editUserRoleSelect.value;
+    if (!userId || !newRole) { showToast("Informações do usuário ou papel inválidas.", "error"); return; }
+    showLoading();
+    try {
+        const response = await fetch(`${API_URL_ADMIN_USERS}/${userId}/role`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: newRole }), credentials: 'include'
+        });
+        hideLoading();
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || `Erro ao alterar papel: ${response.status}`);
+        showToast(data.message, 'success');
+        if(modalEditUserRole) modalEditUserRole.style.display = 'none';
+        carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers, currentFiltersAdminUsers);
+    } catch (error) {
+        hideLoading(); console.error("Erro ao alterar papel:", error);
+        if(editUserRoleErrorMessage) {editUserRoleErrorMessage.textContent = error.message; editUserRoleErrorMessage.style.display = 'block';}
+        showToast(`Falha ao alterar papel: ${error.message}`, 'error');
+    }
 }
