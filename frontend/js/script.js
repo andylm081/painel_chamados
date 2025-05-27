@@ -1,10 +1,16 @@
 // --- Constantes de API ---
-const API_BASE_URL = 'http://127.0.0.1:5000/api';
-const AUTH_API_URL = 'http://127.0.0.1:5000'; 
+const API_BASE_URL = '/api'; // Caminhos relativos para deploy na Vercel
+// AUTH_API_URL não é mais estritamente necessária se todas as rotas de auth usam API_BASE_URL
 const API_URL_PAGAMENTOS = `${API_BASE_URL}/chamados_pagamento`;
 const API_URL_FORNECEDORES = `${API_BASE_URL}/fornecedores`;
 const API_URL_DIVERSOS = `${API_BASE_URL}/chamados_diversos`;
 const API_URL_ADMIN_USERS = `${API_BASE_URL}/admin/users`;
+
+// Rotas de autenticação
+const API_URL_REGISTER = `${API_BASE_URL}/register`;
+const API_URL_LOGIN = `${API_BASE_URL}/login`;
+const API_URL_LOGOUT = `${API_BASE_URL}/logout`;
+const API_URL_CHECK_AUTH = `${API_BASE_URL}/check_auth_status`;
 
 // --- Seletores Globais ---
 const currentYearSpan = document.getElementById('currentYear');
@@ -40,6 +46,7 @@ const editUserIdInput = document.getElementById('edit-user-id');
 const editUserUsernameDisplay = document.getElementById('edit-user-username-display');
 const editUserRoleSelect = document.getElementById('edit-user-role-select');
 const editUserRoleErrorMessage = document.getElementById('edit-user-role-error-message');
+const paginationAdminUsersDiv = document.getElementById('pagination-admin-users'); 
 
 // Chamado Pagamento
 const listaChamadosPagamentoDiv = document.getElementById('lista-chamados-pagamento');
@@ -135,7 +142,7 @@ let currentFiltersPag = {}, currentFiltersDiv = {}, currentFiltersForn = {}, cur
 
 // --- Funções Auxiliares ---
 function showToast(message, type = 'info') {
-    if (!toastContainer) return;
+    if (!toastContainer) { console.warn("Toast container não encontrado"); return; }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
@@ -148,14 +155,21 @@ function showToast(message, type = 'info') {
 }
 
 function showLoading(show = true) {
-    if (loadingIndicator) loadingIndicator.style.display = show ? 'flex' : 'none';
+    if (loadingIndicator) {
+        loadingIndicator.style.display = show ? 'flex' : 'none';
+    }
 }
 function hideLoading() { 
-    if (loadingIndicator) loadingIndicator.style.display = 'none'; 
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none'; 
+    }
 }
 
-function setListMessage(listDiv, message) {
-    if (listDiv) listDiv.innerHTML = `<p class="empty-state-message">${message}</p>`;
+function setListMessage(listDivOrId, message) {
+    const listElement = typeof listDivOrId === 'string' ? document.getElementById(listDivOrId) : listDivOrId;
+    if (listElement) {
+        listElement.innerHTML = `<p class="empty-state-message">${message}</p>`;
+    }
 }
 
 function formatarStatusParaClasse(status) { return status ? status.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '') : 'desconhecido'; }
@@ -166,25 +180,27 @@ const formatDateForInput = (dateString) => { if (!dateString) return ''; const d
 async function checkAuthStatus() {
     showLoading();
     try {
-        const response = await fetch(`${AUTH_API_URL}/api/check_auth_status`, { credentials: 'include' });
-        const data = await response.json();
-        // Não chame hideLoading() aqui diretamente, updateAuthUI fará isso
-        if (data.logged_in) {
-            currentUser = data.user;
-            updateAuthUI(true);
-        } else {
-            currentUser = null;
-            updateAuthUI(false); // updateAuthUI chamará hideLoading
+        const response = await fetch(API_URL_CHECK_AUTH, { credentials: 'include' });
+        if (!response.ok) { 
+            if (response.status === 401) { 
+                 currentUser = null; updateAuthUI(false); return; 
+            }
+            // Tenta ler como texto para outros erros HTTP que podem não ter corpo JSON
+            const errorText = await response.text().catch(() => `Erro HTTP ${response.status} ao verificar autenticação.`);
+            throw new Error(`Falha ao verificar status: ${errorText.substring(0,150)}`);
         }
-    } catch (error) {
-        console.error("Erro ao verificar auth:", error);
-        currentUser = null;
-        updateAuthUI(false); // updateAuthUI chamará hideLoading
-        showToast("Servidor de autenticação indisponível. Tente novamente mais tarde.", "error");
+        const data = await response.json();
+        if (data.logged_in) { currentUser = data.user; updateAuthUI(true); } 
+        else { currentUser = null; updateAuthUI(false); }
+    } catch (error) { 
+        console.error("Erro CRÍTICO em checkAuthStatus:", error);
+        currentUser = null; updateAuthUI(false); 
+        showToast(`Falha na autenticação inicial. O servidor pode estar indisponível.`, "error");
     }
 }
 
 function updateAuthUI(isLoggedIn) {
+    hideLoading(); 
     if (isLoggedIn && currentUser) {
         if (mainAppContentDiv) mainAppContentDiv.style.display = 'block';
         if (authSectionPlaceholder) authSectionPlaceholder.style.display = 'none';
@@ -194,32 +210,25 @@ function updateAuthUI(isLoggedIn) {
             if (btnLogout) btnLogout.addEventListener('click', handleLogout);
         }
         
-        document.querySelectorAll('.master-only-filter').forEach(el => {
-            el.style.display = currentUser.role === 'master' ? 'inline-block' : 'none';
-        });
-        document.querySelectorAll('.owner-column').forEach(el => { 
-            el.style.display = currentUser.role === 'master' ? '' : 'none'; 
-        });
+        document.querySelectorAll('.master-only-filter').forEach(el => {el.style.display = currentUser.role === 'master' ? 'inline-block' : 'none';});
+        document.querySelectorAll('.owner-column').forEach(el => { el.style.display = currentUser.role === 'master' ? '' : 'none'; });
         if(navAdminUsersLink) navAdminUsersLink.style.display = currentUser.role === 'master' ? 'list-item' : 'none';
 
         const activeLink = document.querySelector('nav ul li a.active');
         if (activeLink) {
             const targetId = activeLink.getAttribute('data-target');
-            if (targetId === 'chamados-pagamento-section') buscarChamadosPagamento();
-            else if (targetId === 'fornecedores-section') carregarErenderizarFornecedores();
-            else if (targetId === 'chamados-diversos-section') buscarChamadosDiversos();
-            else if (targetId === 'admin-users-section' && currentUser.role === 'master') carregarErenderizarAdminUsers();
+            if (targetId === 'chamados-pagamento-section' && typeof buscarChamadosPagamento === 'function') buscarChamadosPagamento();
+            else if (targetId === 'fornecedores-section' && typeof carregarErenderizarFornecedores === 'function') carregarErenderizarFornecedores();
+            else if (targetId === 'chamados-diversos-section' && typeof buscarChamadosDiversos === 'function') buscarChamadosDiversos();
+            else if (targetId === 'admin-users-section' && currentUser.role === 'master' && typeof carregarErenderizarAdminUsers === 'function') carregarErenderizarAdminUsers();
         } else { 
-            const firstTabLink = document.querySelector('nav ul li a');
-            if (firstTabLink) {
-                firstTabLink.click(); 
-            } else { 
-                buscarChamadosPagamento();
-            }
+            const firstTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
+            if (firstTabLink) { firstTabLink.click(); }
+            else if (typeof buscarChamadosPagamento === 'function') { buscarChamadosPagamento();}
         }
-        carregarFornecedoresGlobais(); 
-        setupFilterListeners(); 
-        setupSortListeners(); 
+        if (typeof carregarFornecedoresGlobais === 'function') carregarFornecedoresGlobais(); 
+        if (typeof setupFilterListeners === 'function') setupFilterListeners(); 
+        if (typeof setupSortListeners === 'function') setupSortListeners(); 
     } else {
         if (mainAppContentDiv) mainAppContentDiv.style.display = 'none';
         if (authSectionPlaceholder) authSectionPlaceholder.style.display = 'block';
@@ -232,7 +241,6 @@ function updateAuthUI(isLoggedIn) {
             if (btnShowRegister && modalRegister) btnShowRegister.addEventListener('click', () => { modalRegister.style.display = 'block'; if (formRegister) formRegister.reset(); if(registerErrorMessage) registerErrorMessage.style.display = 'none'; });
         }
     }
-    hideLoading(); // Chamada única no final de updateAuthUI
 }
 
 async function handleLogin(event) {
@@ -242,7 +250,7 @@ async function handleLogin(event) {
     const username = usernameInput.value; const password = passwordInput.value;
     showLoading();
     try {
-        const response = await fetch(`${AUTH_API_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }), credentials: 'include' });
+        const response = await fetch(API_URL_LOGIN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }), credentials: 'include' });
         const data = await response.json(); 
         if (response.ok) { currentUser = data.user; if (modalLogin) modalLogin.style.display = 'none'; if (formLogin) formLogin.reset(); updateAuthUI(true); showToast(data.message, 'success'); }
         else { throw new Error(data.message || "Erro no login."); }
@@ -260,7 +268,7 @@ async function handleRegister(event) {
     if (password !== confirmPassword) { if (registerErrorMessage) { registerErrorMessage.textContent = "As senhas não coincidem."; registerErrorMessage.style.display = 'block'; } showToast("As senhas não coincidem.", "error"); return; }
     showLoading();
     try {
-        const response = await fetch(`${AUTH_API_URL}/api/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email, password }) });
+        const response = await fetch(API_URL_REGISTER, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email, password }) });
         const data = await response.json(); 
         if (response.ok) { if (modalRegister) modalRegister.style.display = 'none'; if (formRegister) formRegister.reset(); showToast(data.message + " Por favor, faça o login.", 'success'); if (modalLogin) modalLogin.style.display = 'block'; }
         else { throw new Error(data.message || "Erro no registro."); }
@@ -271,7 +279,7 @@ async function handleRegister(event) {
 async function handleLogout() {
     showLoading();
     try {
-        const response = await fetch(`${AUTH_API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+        const response = await fetch(API_URL_LOGOUT, { method: 'POST', credentials: 'include' });
         const data = await response.json(); 
         if (response.ok) { currentUser = null; todosFornecedoresCache = []; todosChamadosPagCache = []; todosChamadosDivCache = []; updateAuthUI(false); showToast(data.message, 'success'); }
         else { throw new Error(data.message || "Erro no logout."); }
@@ -285,7 +293,8 @@ async function carregarFornecedoresGlobais() {
     try {
         const response = await fetch(API_URL_FORNECEDORES, {credentials: 'include'});
         if (!response.ok) { 
-            console.error('Erro ao carregar fornecedores para datalist:', response.status);
+            const errorText = await response.text().catch(() => `Erro HTTP ${response.status}`);
+            console.warn('Não foi possível carregar fornecedores para datalist:', errorText);
             todosFornecedoresCache = [];
         } else {
             todosFornecedoresCache = await response.json();
@@ -311,12 +320,12 @@ async function carregarFornecedoresGlobais() {
 function setupFornecedorInput(inputNomeElem, inputHiddenIdElem, inputNumIdElem, datalistElem) {
     if (inputNomeElem && inputHiddenIdElem && inputNumIdElem && datalistElem) {
         inputNomeElem.addEventListener('input', function () {
-            const nomeDigitado = this.value.trim();
+            const nomeDigitado = this.value.trim().toLowerCase(); 
             let fornecedorEncontrado = null;
-            const option = Array.from(datalistElem.options).find(opt => opt.value.toLowerCase() === nomeDigitado.toLowerCase());
+            const option = Array.from(datalistElem.options).find(opt => opt.value.toLowerCase() === nomeDigitado);
             if (option) { fornecedorEncontrado = { id: option.dataset.id, nome_fornecedor: option.value, numero_identificacao_fornecedor: option.dataset.numId }; }
             if (!fornecedorEncontrado && nomeDigitado) { 
-                 fornecedorEncontrado = todosFornecedoresCache.find(f => f.nome_fornecedor.toLowerCase() === nomeDigitado.toLowerCase());
+                 fornecedorEncontrado = todosFornecedoresCache.find(f => f.nome_fornecedor.toLowerCase() === nomeDigitado);
             }
             if (fornecedorEncontrado) {
                 inputHiddenIdElem.value = fornecedorEncontrado.id;
@@ -376,19 +385,19 @@ function fecharModalNovoEditarFornecedor() {
 }
 
 async function carregarErenderizarFornecedores(page = 1, sortConfig = currentSortForn, filters = currentFiltersForn) {
-    if (!corpoTabelaFornecedores || !currentUser) return;
-    showLoading('corpo-tabela-fornecedores'); // Passa o ID do tbody para mostrar o loading nele
+    if (!corpoTabelaFornecedores || !currentUser) {
+        if(corpoTabelaFornecedores) setListMessage(corpoTabelaFornecedores, "<tr><td colspan=\"5\">Faça login para ver os fornecedores.</td></tr>");
+        return;
+    }
+    showLoading('corpo-tabela-fornecedores'); 
     currentSortForn = sortConfig; currentPageForn = page; currentFiltersForn = filters;
 
-    // Reseta setas de ordenação nos headers da tabela antes de carregar
     if (tabelaFornecedoresHeaders) {
         tabelaFornecedoresHeaders.forEach(th => {
             const arrow = th.querySelector('.sort-arrow');
-            if (arrow) arrow.textContent = ''; // Limpa seta
-             // Remove classe de direção ativa, se houver
+            if (arrow) arrow.textContent = ''; 
             th.classList.remove('sort-asc', 'sort-desc');
         });
-        // Adiciona seta e classe ao header atualmente ordenado
         const activeTh = document.querySelector(`#tabela-fornecedores th[data-sortkey="${currentSortForn.key}"]`);
         if (activeTh) {
             const arrowSpan = activeTh.querySelector('.sort-arrow');
@@ -402,7 +411,7 @@ async function carregarErenderizarFornecedores(page = 1, sortConfig = currentSor
         hideLoading();
         if (!response.ok) throw new Error('Erro ao buscar fornecedores.');
         let fornecedoresDaApi = await response.json();
-        todosFornecedoresCache = fornecedoresDaApi; // Atualiza cache completo
+        todosFornecedoresCache = fornecedoresDaApi; 
         
         let itemsParaFiltrarEOrdenar = [...todosFornecedoresCache]; 
         itemsParaFiltrarEOrdenar = aplicarFiltros(itemsParaFiltrarEOrdenar, currentFiltersForn, 'fornecedor');
@@ -412,7 +421,7 @@ async function carregarErenderizarFornecedores(page = 1, sortConfig = currentSor
     } catch (e) {
         hideLoading();
         console.error("Erro ao carregar e renderizar fornecedores:", e);
-        if (corpoTabelaFornecedores) setListMessage(corpoTabelaFornecedores, `Erro ao carregar fornecedores: ${e.message}`);
+        if (corpoTabelaFornecedores) setListMessage(corpoTabelaFornecedores, `<tr><td colspan="5" class="error-message">Erro ao carregar fornecedores: ${e.message}</td></tr>`);
         showToast(`Erro ao carregar fornecedores: ${e.message}`, 'error');
     }
 }
@@ -423,16 +432,17 @@ function renderizarTabelaFornecedores(fornecedores, page = 1) {
     const start = (page - 1) * ITEMS_PER_PAGE_TABLE;
     const end = start + ITEMS_PER_PAGE_TABLE;
     const paginatedItems = fornecedores.slice(start, end);
+    const cols = (currentUser && currentUser.role === 'master' && document.querySelector('.owner-column')?.style.display !== 'none' ? 1 : 0) + 4;
+
 
     if (paginatedItems.length === 0) {
-        const colunas = (currentUser && currentUser.role === 'master' ? 1 : 0) + 4; // 4 base + 1 se master
-        corpoTabelaFornecedores.innerHTML = `<tr><td colspan="${colunas}"><p class="empty-state-message">Nenhum fornecedor encontrado ${Object.keys(currentFiltersForn).length > 0 ? 'para os filtros aplicados' : ''}.</p></td></tr>`;
+        setListMessage(corpoTabelaFornecedores, `<tr><td colspan="${cols}">Nenhum fornecedor encontrado ${Object.keys(currentFiltersForn).length > 0 ? 'para os filtros aplicados' : ''}.</td></tr>`);
     } else {
         paginatedItems.forEach(f => {
             const tr = document.createElement('tr');
             let ownerColumnHtml = '';
             if (currentUser && currentUser.role === 'master') {
-                ownerColumnHtml = `<td data-label="Usuário">${f.owner_username || 'N/A'}</td>`;
+                ownerColumnHtml = `<td data-label="Usuário" class="owner-column-data" style="${document.querySelector('.owner-column')?.style.display || ''}">${f.owner_username || 'N/A'}</td>`;
             }
             tr.innerHTML = `
                 <td data-label="ID">${f.id}</td>
@@ -473,7 +483,9 @@ if (formNovoEditarFornecedor) {
             if (!response.ok) { throw new Error(responseData.message || `HTTP Error: ${response.status}`); }
             fecharModalNovoEditarFornecedor();
             const targetPage = method === 'POST' ? 1 : currentPageForn;
-            carregarErenderizarFornecedores(targetPage, currentSortForn, {}); // Reseta filtros ao criar/editar
+            currentFiltersForn = {}; // Reseta filtros ao criar/editar com sucesso
+            document.querySelectorAll('.filter-input[data-list="corpo-tabela-fornecedores"]').forEach(fi => fi.value = '');
+            carregarErenderizarFornecedores(targetPage, currentSortForn, currentFiltersForn);
             carregarFornecedoresGlobais(); 
             showToast(`Fornecedor ${fornecedorAtualParaEdicaoId ? 'atualizado' : 'criado'} com sucesso!`, 'success');
         } catch (error) {
@@ -507,13 +519,15 @@ if (corpoTabelaFornecedores) {
                         if (!response.ok) { throw new Error(data.message || `Erro ao excluir fornecedor: ${response.status}`); }
                         showToast('Fornecedor excluído com sucesso!', 'success');
                         
-                        const totalItemsAposExclusao = todosFornecedoresCache.length - 1; 
+                        const totalItemsAposExclusao = todosFornecedoresCache.filter(f => f.id !== parseInt(fornecedorId)).length; 
                         const totalPagesAposExclusao = Math.ceil(totalItemsAposExclusao / ITEMS_PER_PAGE_TABLE);
                         let paginaAlvo = currentPageForn;
-                        if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
+
+                        if ( (currentPageForn * ITEMS_PER_PAGE_TABLE) - (ITEMS_PER_PAGE_TABLE -1 ) > totalItemsAposExclusao && currentPageForn > 1) {
+                           paginaAlvo = currentPageForn - 1;
+                        }
+                         if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
                             paginaAlvo = totalPagesAposExclusao;
-                        } else if (totalItemsAposExclusao === 0 && currentPageForn > 1) { // Se excluiu o último item de uma página > 1
-                            paginaAlvo = Math.max(1, currentPageForn -1);
                         } else if (totalItemsAposExclusao === 0){
                              paginaAlvo = 1;
                         }
@@ -532,16 +546,25 @@ if (corpoTabelaFornecedores) {
             
             const pagTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
             if (pagTabLink) {
-                pagTabLink.click();
+                if (!pagTabLink.classList.contains('active')) {
+                     pagTabLink.click(); // Isso deve resetar os filtros da aba de destino
+                }
+                // Espera a lógica de clique na aba (que reseta filtros) ser processada
                 setTimeout(() => { 
                     const filtroFornPag = document.getElementById('filtro-fornecedor-chamado-pag');
                     if (filtroFornPag) {
                         filtroFornPag.value = supplierName;
                         filtroFornPag.dispatchEvent(new Event('input', { bubbles: true })); 
                     }
-                }, 150); 
+                     // Opcionalmente, filtrar também em Chamados Diversos
+                    const filtroFornDiv = document.getElementById('filtro-fornecedor-chamado-div');
+                    if(filtroFornDiv && document.getElementById('chamados-diversos-section')?.style.display === 'block'){
+                        filtroFornDiv.value = supplierName;
+                        filtroFornDiv.dispatchEvent(new Event('input', {bubbles: true}));
+                    }
+                }, 250); // Aumentado o delay para garantir que a troca de aba e reset de filtros ocorra
             }
-            showToast(`Filtrando chamados de pagamento por: ${supplierName}`, 'info');
+            showToast(`Filtrando chamados por: ${supplierName}`, 'info');
         }
     });
 }
@@ -560,9 +583,7 @@ function abrirModalRegistrarChamadoPag() {
     if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = '';
     if (modalChamadoPagErrorMessage) modalChamadoPagErrorMessage.style.display = 'none';
     
-    // A função carregarFornecedoresGlobais() já deve ter populado o datalistFornecedores
-    // Se for necessário recarregar a cada abertura de modal:
-    // carregarFornecedoresGlobais(); 
+    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor
     
     if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'block';
 }
@@ -583,7 +604,7 @@ async function abrirModalEditarChamadoPag(chamadoId) {
         if (modalChamadoPagTitulo) modalChamadoPagTitulo.textContent = 'Editar Registro de Chamado de Pagamento';
         if (inputChamadoPagIdEdicao) inputChamadoPagIdEdicao.value = chamado.id;
 
-        // await carregarFornecedoresGlobais(); // Garante que a lista está atualizada, mas pode ser redundante se já carregada
+        // await carregarFornecedoresGlobais(); // Pode ser redundante
 
         if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = chamado.nome_fornecedor || '';
         if (inputHiddenFornecedorIdChamadoPag) inputHiddenFornecedorIdChamadoPag.value = chamado.fornecedor_id || '';
@@ -592,17 +613,28 @@ async function abrirModalEditarChamadoPag(chamadoId) {
             inputNumIdFornecedorChamadoPag.readOnly = !!chamado.fornecedor_id; 
         }
         
-        const form = formRegistrarEditarChamadoPag; // Garante que está se referindo ao formulário correto
+        const form = formRegistrarEditarChamadoPag; 
         if(form) {
-            if(form.numero_chamado_origem_pag) form.numero_chamado_origem_pag.value = chamado.numero_chamado_origem || '';
-            if(form.numero_fatura_pag) form.numero_fatura_pag.value = chamado.numero_fatura || '';
-            if(form.lancamento_pag) form.lancamento_pag.value = chamado.lancamento || '';
-            if(form.valor_pag) form.valor_pag.value = chamado.valor || '';
-            if(form.data_escrituracao_pag) form.data_escrituracao_pag.value = formatDateForInput(chamado.data_escrituracao);
-            if(form.prazo_maximo_escrituracao_pag) form.prazo_maximo_escrituracao_pag.value = formatDateForInput(chamado.prazo_maximo_escrituracao);
-            if(form.data_vencimento_pag) form.data_vencimento_pag.value = formatDateForInput(chamado.data_vencimento);
-            if(form.situacao_pag) form.situacao_pag.value = chamado.situacao || 'Pendente';
-            if(form.observacoes_gerais_pag) form.observacoes_gerais_pag.value = chamado.observacoes_gerais || '';
+            // Acessando elementos pelo ID específico do formulário _pag
+            const numeroChamadoOrigemPag = form.querySelector('#numero_chamado_origem_pag');
+            const numeroFaturaPag = form.querySelector('#numero_fatura_pag');
+            const lancamentoPag = form.querySelector('#lancamento_pag');
+            const valorPag = form.querySelector('#valor_pag');
+            const dataEscrituracaoPag = form.querySelector('#data_escrituracao_pag');
+            const prazoMaximoEscrituracaoPag = form.querySelector('#prazo_maximo_escrituracao_pag');
+            const dataVencimentoPag = form.querySelector('#data_vencimento_pag');
+            const situacaoPag = form.querySelector('#situacao_pag');
+            const observacoesGeraisPag = form.querySelector('#observacoes_gerais_pag');
+
+            if(numeroChamadoOrigemPag) numeroChamadoOrigemPag.value = chamado.numero_chamado_origem || '';
+            if(numeroFaturaPag) numeroFaturaPag.value = chamado.numero_fatura || '';
+            if(lancamentoPag) lancamentoPag.value = chamado.lancamento || '';
+            if(valorPag) valorPag.value = chamado.valor || '';
+            if(dataEscrituracaoPag) dataEscrituracaoPag.value = formatDateForInput(chamado.data_escrituracao);
+            if(prazoMaximoEscrituracaoPag) prazoMaximoEscrituracaoPag.value = formatDateForInput(chamado.prazo_maximo_escrituracao);
+            if(dataVencimentoPag) dataVencimentoPag.value = formatDateForInput(chamado.data_vencimento);
+            if(situacaoPag) situacaoPag.value = chamado.situacao || 'Pendente';
+            if(observacoesGeraisPag) observacoesGeraisPag.value = chamado.observacoes_gerais || '';
         }
 
         if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'block';
@@ -625,18 +657,18 @@ if (formRegistrarEditarChamadoPag) {
         
         const form = formRegistrarEditarChamadoPag; 
         const chamadoData = {
-            numero_chamado_origem: form.numero_chamado_origem_pag.value,
-            numero_fatura: form.numero_fatura_pag.value,
+            numero_chamado_origem: form.elements['numero_chamado_origem_pag'].value, 
+            numero_fatura: form.elements['numero_fatura_pag'].value,
             fornecedor_id: inputHiddenFornecedorIdChamadoPag.value ? parseInt(inputHiddenFornecedorIdChamadoPag.value) : null,
             nome_fornecedor_input: inputNomeFornecedorChamadoPag.value, 
             numero_identificacao_fornecedor_input: inputNumIdFornecedorChamadoPag.value, 
-            lancamento: form.lancamento_pag.value,
-            valor: parseFloat(form.valor_pag.value),
-            data_escrituracao: form.data_escrituracao_pag.value || null,
-            prazo_maximo_escrituracao: form.prazo_maximo_escrituracao_pag.value || null,
-            data_vencimento: form.data_vencimento_pag.value,
-            situacao: form.situacao_pag.value,
-            observacoes_gerais: form.observacoes_gerais_pag.value
+            lancamento: form.elements['lancamento_pag'].value,
+            valor: parseFloat(form.elements['valor_pag'].value),
+            data_escrituracao: form.elements['data_escrituracao_pag'].value || null,
+            prazo_maximo_escrituracao: form.elements['prazo_maximo_escrituracao_pag'].value || null,
+            data_vencimento: form.elements['data_vencimento_pag'].value,
+            situacao: form.elements['situacao_pag'].value,
+            observacoes_gerais: form.elements['observacoes_gerais_pag'].value
         };
 
         let url = API_URL_PAGAMENTOS;
@@ -813,7 +845,8 @@ function abrirModalRegistrarChamadoDiv() {
     }
     if(inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = '';
     if (modalChamadoDivErrorMessage) modalChamadoDivErrorMessage.style.display = 'none';
-    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor
+    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor, 
+    // então geralmente estará atualizado.
     if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
 }
 
@@ -825,7 +858,7 @@ async function abrirModalEditarChamadoDiv(chamadoId) {
         const response = await fetch(`${API_URL_DIVERSOS}/${chamadoId}`, { credentials: 'include' });
         hideLoading();
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: "Erro ao buscar dados do chamado."}));
+            const errorData = await response.json().catch(() => ({ message: "Erro ao buscar dados do chamado diverso."}));
             throw new Error(errorData.message || `Erro HTTP ${response.status}`);
         }
         const chamado = await response.json();
@@ -833,7 +866,7 @@ async function abrirModalEditarChamadoDiv(chamadoId) {
         if (modalChamadoDivTitulo) modalChamadoDivTitulo.textContent = 'Editar Registro de Chamado Diverso';
         if (inputChamadoDivIdEdicao) inputChamadoDivIdEdicao.value = chamado.id;
 
-        // await carregarFornecedoresGlobais(); // Garante que datalist está atualizado
+        // await carregarFornecedoresGlobais(); // Pode ser redundante se o cache estiver atualizado
 
         if (inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = chamado.nome_fornecedor || '';
         if (inputHiddenFornecedorIdChamadoDiv) inputHiddenFornecedorIdChamadoDiv.value = chamado.fornecedor_id || '';
@@ -842,13 +875,14 @@ async function abrirModalEditarChamadoDiv(chamadoId) {
             inputNumIdFornecedorChamadoDiv.readOnly = !!chamado.fornecedor_id;
         }
         
-        const form = formRegistrarEditarChamadoDiv;
+        const form = formRegistrarEditarChamadoDiv; // Garante que está se referindo ao formulário correto
         if(form){
-            form.numero_chamado_origem_div.value = chamado.numero_chamado_origem || '';
-            form.valor_div.value = chamado.valor !== null ? chamado.valor : ''; 
-            form.data_escrituracao_div.value = formatDateForInput(chamado.data_escrituracao);
-            form.situacao_div.value = chamado.situacao || 'Aberto';
-            form.observacoes_div.value = chamado.observacoes || '';
+            // Acessando elementos pelo ID específico do formulário _div
+            if(form.elements['numero_chamado_origem_div']) form.elements['numero_chamado_origem_div'].value = chamado.numero_chamado_origem || '';
+            if(form.elements['valor_div']) form.elements['valor_div'].value = chamado.valor !== null ? chamado.valor : ''; 
+            if(form.elements['data_escrituracao_div']) form.elements['data_escrituracao_div'].value = formatDateForInput(chamado.data_escrituracao);
+            if(form.elements['situacao_div']) form.elements['situacao_div'].value = chamado.situacao || 'Aberto';
+            if(form.elements['observacoes_div']) form.elements['observacoes_div'].value = chamado.observacoes || '';
         }
 
         if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
@@ -871,14 +905,14 @@ if (formRegistrarEditarChamadoDiv) {
         
         const form = formRegistrarEditarChamadoDiv;
         const chamadoData = {
-            numero_chamado_origem: form.numero_chamado_origem_div.value,
+            numero_chamado_origem: form.elements['numero_chamado_origem_div'].value,
             fornecedor_id: inputHiddenFornecedorIdChamadoDiv.value ? parseInt(inputHiddenFornecedorIdChamadoDiv.value) : null,
             nome_fornecedor_input: inputNomeFornecedorChamadoDiv.value,
             numero_identificacao_fornecedor_input: inputNumIdFornecedorChamadoDiv.value,
-            valor: form.valor_div.value ? parseFloat(form.valor_div.value) : null,
-            data_escrituracao: form.data_escrituracao_div.value,
-            situacao: form.situacao_div.value,
-            observacoes: form.observacoes_div.value
+            valor: form.elements['valor_div'].value ? parseFloat(form.elements['valor_div'].value) : null,
+            data_escrituracao: form.elements['data_escrituracao_div'].value,
+            situacao: form.elements['situacao_div'].value,
+            observacoes: form.elements['observacoes_div'].value
         };
 
         let url = API_URL_DIVERSOS;
@@ -945,12 +979,12 @@ async function abrirModalAcompanhamentosChamadoDiv(chamadoId) {
 
         acompanhamentosChamadoDivTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
         let fornecedorInfoHtml = '';
-        if (chamado.fornecedor_id) { // Só mostra seção do fornecedor se existir
+        if (chamado.fornecedor_id) { 
             fornecedorInfoHtml = `<p><strong>Fornecedor:</strong> ${chamado.nome_fornecedor || 'N/A'} (ID: ${chamado.fornecedor_id})</p>
                                   <p><strong>N° ID Fornecedor:</strong> ${chamado.numero_identificacao_fornecedor || 'N/A'}</p>`;
         }
         let valorInfoHtml = '';
-        if (chamado.valor !== null && chamado.valor !== undefined) { // Só mostra valor se existir
+        if (chamado.valor !== null && chamado.valor !== undefined) { 
             valorInfoHtml = `<p><strong>Valor:</strong> R$ ${chamado.valor.toFixed(2).replace('.', ',')}</p>`;
         }
         acompanhamentosChamadoDivInfo.innerHTML = `
@@ -1026,7 +1060,6 @@ if (formNovoAcompanhamentoDiv) {
     });
 }
 
-
 // --- BUSCAR E RENDERIZAR CHAMADOS DIVERSOS ---
 async function buscarChamadosDiversos(page = 1, sortOption = currentSortDiv, filters = currentFiltersDiv) {
     if (!listaChamadosDiversosDiv || !currentUser) return;
@@ -1079,6 +1112,7 @@ function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, cu
                  fornecedorHTML = `<p><strong>Fornecedor:</strong> N/A</p>`;
             }
 
+
             let valorHTML = '';
             if (chamado.valor !== null && chamado.valor !== undefined) {
                  valorHTML = `<p><strong>Valor:</strong> R$ ${chamado.valor ? chamado.valor.toFixed(2).replace('.', ',') : '0,00'}</p>`;
@@ -1118,6 +1152,7 @@ function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, cu
     }
 
     const paginationContainerId = tipoChamadoSlug === 'pag' ? 'pagination-chamados-pag' : 'pagination-chamados-div';
+    
     const paginationCallback = (newPage) => {
         if (tipoChamadoSlug === 'pag') {
             buscarChamadosPagamento(newPage, currentSortPag, currentFiltersPag);
@@ -1133,7 +1168,7 @@ function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, cu
 document.querySelectorAll('.chamados-grid').forEach(grid => {
     grid.addEventListener('click', async (event) => {
         const targetButton = event.target.closest('button');
-        const targetLink = event.target.closest('a.supplier-name-link');
+        const targetLink = event.target.closest('a.supplier-name-link'); 
 
         if (targetButton) {
             const chamadoId = targetButton.dataset.id;
@@ -1173,16 +1208,17 @@ document.querySelectorAll('.chamados-grid').forEach(grid => {
              event.preventDefault();
             const supplierName = targetLink.dataset.supplierName;
             const pagTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
-            // Prioriza filtrar na aba de pagamentos, mas poderia ser a aba ativa se quiséssemos mais complexidade
             if (pagTabLink) {
-                pagTabLink.click();
+                if (!pagTabLink.classList.contains('active')) {
+                     pagTabLink.click();
+                }
                 setTimeout(() => { 
                     const filtroFornPag = document.getElementById('filtro-fornecedor-chamado-pag');
                     if (filtroFornPag) {
                         filtroFornPag.value = supplierName;
                         filtroFornPag.dispatchEvent(new Event('input', { bubbles: true })); 
                     }
-                }, 150);
+                }, 200); 
             }
             showToast(`Filtrando chamados de pagamento por: ${supplierName}`, 'info');
         }
@@ -1230,12 +1266,10 @@ function aplicarFiltros(items, filters, itemType) {
                 itemVal = String(item.nome_fornecedor).toLowerCase().trim();
             } else if (fieldKey === 'numero_identificacao_fornecedor' && item.numero_identificacao_fornecedor) {
                  itemVal = String(item.numero_identificacao_fornecedor).toLowerCase().trim();
-            } else if (fieldKey === 'owner_username' && item.owner_username) {
+            } else if (fieldKey === 'owner_username' && item.owner_username) { 
                 itemVal = String(item.owner_username).toLowerCase().trim();
-            } else if (fieldKey === 'username' && item.username) { // Para filtro de usuários admin
-                itemVal = String(item.username).toLowerCase().trim();
-            } else if (fieldKey === 'email' && item.email) { // Para filtro de usuários admin
-                 itemVal = String(item.email).toLowerCase().trim();
+            } else if (itemType === 'user_admin' && (fieldKey === 'username' || fieldKey === 'email' || fieldKey === 'role')) { 
+                itemVal = item[fieldKey] ? String(item[fieldKey]).toLowerCase().trim() : '';
             } else if (item[fieldKey]) { 
                 itemVal = String(item[fieldKey]).toLowerCase().trim();
             }
@@ -1255,12 +1289,13 @@ function aplicarOrdenacao(items, sortOption) {
         key = sortOption.key;
         direction = sortOption.direction;
     } else if (typeof sortOption === 'string' && sortOption.includes('_')) { 
-        [key, direction] = sortOption.split('_');
-    } else if (typeof sortOption === 'string') { // Caso seja só a chave (default asc)
+        const parts = sortOption.split('_');
+        direction = parts.pop(); 
+        key = parts.join('_');   
+    } else if (typeof sortOption === 'string') { 
         key = sortOption;
-        direction = 'asc';
-    }
-     else {
+        direction = 'asc'; 
+    } else {
         return items; 
     }
     
@@ -1270,13 +1305,14 @@ function aplicarOrdenacao(items, sortOption) {
         let valA = a[key];
         let valB = b[key];
 
-        if(key === 'nome_fornecedor' && a.fornecedor_obj) valA = a.fornecedor_obj.nome_fornecedor;
-        if(key === 'nome_fornecedor' && b.fornecedor_obj) valB = b.fornecedor_obj.nome_fornecedor;
-        if(key === 'owner_username' && a.owner) valA = a.owner.username; 
-        if(key === 'owner_username' && b.owner) valB = b.owner.username;
+        // Tratamento para campos que podem ser de objetos aninhados (ex: nome_fornecedor em chamados)
+        if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor;
+        if(key === 'nome_fornecedor' && b.nome_fornecedor) valB = b.nome_fornecedor;
+        if(key === 'owner_username' && a.owner_username) valA = a.owner_username; 
+        if(key === 'owner_username' && b.owner_username) valB = b.owner_username;
 
 
-        if (key.startsWith('data_') && valA && valB) {
+        if (key && key.startsWith('data_') && valA && valB) {
             valA = new Date(valA);
             valB = new Date(valB);
         } else if (typeof valA === 'number' && typeof valB === 'number') {
@@ -1293,36 +1329,44 @@ function aplicarOrdenacao(items, sortOption) {
 }
 
 function setupSortListeners() {
-    if (sortChamadoPagSelect) sortChamadoPagSelect.addEventListener('change', (e) => buscarChamadosPagamento(1, e.target.value, currentFiltersPag));
-    if (sortChamadoDivSelect) sortChamadoDivSelect.addEventListener('change', (e) => buscarChamadosDiversos(1, e.target.value, currentFiltersDiv));
+    if (sortChamadoPagSelect) sortChamadoPagSelect.addEventListener('change', (e) => {
+        currentSortPag = e.target.value;
+        buscarChamadosPagamento(1, currentSortPag, currentFiltersPag);
+    });
+    if (sortChamadoDivSelect) sortChamadoDivSelect.addEventListener('change', (e) => {
+        currentSortDiv = e.target.value;
+        buscarChamadosDiversos(1, currentSortDiv, currentFiltersDiv);
+    });
     
-    const configureTableSort = (headers, sortStateVar, fetchFn, filtersVar, paginationVar) => {
+    const configureTableSort = (headers, sortStateVarRef, fetchFn, filtersVarRef, pageVarName) => {
         if(headers) {
             headers.forEach(th => {
+                const sortKey = th.dataset.sortkey; if (!sortKey) return; 
+
                 th.addEventListener('click', () => {
-                    const sortKey = th.dataset.sortkey; if (!sortKey) return;
-                    const newDirection = (sortStateVar.key === sortKey && sortStateVar.direction === 'asc') ? 'desc' : 'asc';
-                    sortStateVar.key = sortKey;
-                    sortStateVar.direction = newDirection;
+                    const newDirection = (sortStateVarRef.key === sortKey && sortStateVarRef.direction === 'asc') ? 'desc' : 'asc';
+                    sortStateVarRef.key = sortKey;
+                    sortStateVarRef.direction = newDirection;
                     
                     headers.forEach(h => { const arrow = h.querySelector('.sort-arrow'); if (arrow) arrow.textContent = ''; h.classList.remove('sort-asc', 'sort-desc');});
                     const arrowSpan = th.querySelector('.sort-arrow'); if (arrowSpan) arrowSpan.textContent = newDirection === 'asc' ? ' ▲' : ' ▼';
                     th.classList.add(newDirection === 'asc' ? 'sort-asc' : 'sort-desc');
                     
-                    fetchFn(1, sortStateVar, filtersVar);
+                    if (pageVarName === 'currentPageForn') currentPageForn = 1;
+                    else if (pageVarName === 'currentPageAdminUsers') currentPageAdminUsers = 1;
+                    
+                    fetchFn(1, sortStateVarRef, filtersVarRef);
                 });
             });
         }
     };
-    configureTableSort(tabelaFornecedoresHeaders, currentSortForn, carregarErenderizarFornecedores, currentFiltersForn, currentPageForn);
-    // Futuramente, configurar para tabela de admin users
-    // const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
-    // configureTableSort(adminUsersTableHeaders, currentSortAdminUsers, carregarErenderizarAdminUsers, currentFiltersAdminUsers, currentPageAdminUsers);
-
+    configureTableSort(tabelaFornecedoresHeaders, currentSortForn, carregarErenderizarFornecedores, currentFiltersForn, 'currentPageForn');
+    const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
+    if (adminUsersTableHeaders.length > 0) configureTableSort(adminUsersTableHeaders, currentSortAdminUsers, carregarErenderizarAdminUsers, currentFiltersAdminUsers, 'currentPageAdminUsers');
 }
 
 // --- LÓGICA DE PAGINAÇÃO ---
-function setupPagination(totalItems, itemsPerPage, currentPage, paginationContainerId, fetchFunctionForPageAndSortAndFilter) {
+function setupPagination(totalItems, itemsPerPage, currentPage, paginationContainerId, fetchFunctionWithPage) {
     const paginationContainer = document.getElementById(paginationContainerId);
     if (!paginationContainer) return;
     paginationContainer.innerHTML = '';
@@ -1336,27 +1380,49 @@ function setupPagination(totalItems, itemsPerPage, currentPage, paginationContai
         button.className = 'btn btn-sm';
         button.classList.add(isActive ? 'btn-primary' : 'btn-secondary');
         button.disabled = isDisabled;
-        button.addEventListener('click', () => fetchFunctionWithPageAndSortAndFilter(pageNumber)); // Ajustado para não passar sort e filter aqui, pois já estarão no estado global
+        if (!isDisabled) { 
+             button.addEventListener('click', () => fetchFunctionWithPage(pageNumber));
+        }
         return button;
     };
 
     paginationContainer.appendChild(createPageButton(currentPage - 1, 'Anterior', currentPage === 1));
 
-    let startPage = Math.max(1, currentPage - 1); // Mostrar menos números, mais simples
+    let startPage = Math.max(1, currentPage - 1); 
     let endPage = Math.min(totalPages, currentPage + 1);
 
-    if (currentPage === 1 && totalPages > 1) endPage = Math.min(3, totalPages);
-    if (currentPage === totalPages && totalPages > 1) startPage = Math.max(1, totalPages - 2);
+    if(totalPages > 3) { 
+        if (currentPage <= 2) { 
+            startPage = 1;
+            endPage = Math.min(3, totalPages);
+        } else if (currentPage >= totalPages - 1) { 
+            startPage = Math.max(1, totalPages - 2);
+            endPage = totalPages;
+        }
+    } else { 
+        startPage = 1;
+        endPage = totalPages;
+    }
     
     if (startPage > 1) {
         paginationContainer.appendChild(createPageButton(1, '1'));
-        if (startPage > 2) paginationContainer.appendChild(document.createTextNode('...'));
+        if (startPage > 2) { 
+            const dots = document.createElement('span');
+            dots.textContent = '...';
+            dots.style.margin = "0 5px";
+            paginationContainer.appendChild(dots);
+        }
     }
     for (let i = startPage; i <= endPage; i++) {
         paginationContainer.appendChild(createPageButton(i, i, false, i === currentPage));
     }
     if (endPage < totalPages) {
-        if (endPage < totalPages - 1) paginationContainer.appendChild(document.createTextNode('...'));
+        if (endPage < totalPages - 1) {
+            const dots = document.createElement('span');
+            dots.textContent = '...';
+            dots.style.margin = "0 5px";
+            paginationContainer.appendChild(dots);
+        }
         paginationContainer.appendChild(createPageButton(totalPages, totalPages));
     }
     paginationContainer.appendChild(createPageButton(currentPage + 1, 'Próxima', currentPage === totalPages));
@@ -1368,17 +1434,16 @@ if (navLinks && contentSections) {
     navLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             event.preventDefault();
-            if (!currentUser && link.dataset.target !== 'admin-users-section' && link.dataset.target !== 'fornecedores-section' && link.dataset.target !== 'chamados-diversos-section' && link.dataset.target !== 'chamados-pagamento-section'  ) { 
-                // Nenhuma ação se não for uma aba de app e não estiver logado
-            } else if (!currentUser && (link.dataset.target !== 'admin-users-section' || (link.dataset.target === 'admin-users-section' && (!currentUser || currentUser.role !== 'master')))) {
-                 showToast("Por favor, faça login para acessar esta área.", "error"); return;
+            const targetId = link.getAttribute('data-target');
+            
+            if (!currentUser && targetId !== 'auth-section-placeholder' && targetId !== 'modal-login' && targetId !== 'modal-register'  ) { 
+                 showToast("Por favor, faça login para acessar esta área.", "error"); 
+                 return;
             }
-            if (link.dataset.target === 'admin-users-section' && (!currentUser || currentUser.role !== 'master')) {
+            if (targetId === 'admin-users-section' && (!currentUser || currentUser.role !== 'master')) {
                  showToast("Acesso restrito a administradores.", "error"); return;
             }
 
-
-            const targetId = link.getAttribute('data-target');
             contentSections.forEach(section => section.style.display = 'none');
             navLinks.forEach(navLink => navLink.classList.remove('active'));
 
@@ -1397,7 +1462,6 @@ if (navLinks && contentSections) {
                 if(tabelaFornecedoresHeaders) tabelaFornecedoresHeaders.forEach(h => {const arrow = h.querySelector('.sort-arrow'); if(arrow) arrow.textContent = ''; h.classList.remove('sort-asc','sort-desc');});
                 const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
                 if(adminUsersTableHeaders) adminUsersTableHeaders.forEach(h => {const arrow = h.querySelector('.sort-arrow'); if(arrow) arrow.textContent = ''; h.classList.remove('sort-asc','sort-desc');});
-
 
                 if (targetId === 'chamados-pagamento-section') buscarChamadosPagamento();
                 else if (targetId === 'fornecedores-section') carregarErenderizarFornecedores();
@@ -1440,8 +1504,8 @@ function setupGlobalEventListeners() {
     if (btnCancelarModalFornecedor) btnCancelarModalFornecedor.addEventListener('click', fecharModalNovoEditarFornecedor);
 
     if(formEditUserRole) formEditUserRole.addEventListener('submit', handleEditUserRoleSubmit);
-    if(btnCloseModalEditUserRole) btnCloseModalEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none';});
-    if(btnCancelEditUserRole) btnCancelEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none';});
+    if(btnCloseModalEditUserRole) btnCloseModalEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none'; adminEditUserId = null;});
+    if(btnCancelEditUserRole) btnCancelEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none'; adminEditUserId = null;});
 }
 
 function init() {
@@ -1450,6 +1514,7 @@ function init() {
     setupGlobalEventListeners(); 
     setupFornecedorInput(inputNomeFornecedorChamadoPag, inputHiddenFornecedorIdChamadoPag, inputNumIdFornecedorChamadoPag, datalistFornecedores);
     setupFornecedorInput(inputNomeFornecedorChamadoDiv, inputHiddenFornecedorIdChamadoDiv, inputNumIdFornecedorChamadoDiv, datalistFornecedoresDiv);
+    // setupFilterListeners e setupSortListeners são chamados DENTRO de updateAuthUI quando o usuário está logado.
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -1484,7 +1549,7 @@ async function carregarErenderizarAdminUsers(page = 1, sortConfig = currentSortA
         renderizarTabelaAdminUsers(itemsToRender, currentPageAdminUsers);
     } catch(e) {
         hideLoading(); console.error("Erro ao carregar usuários admin:", e);
-        setListMessage(corpoTabelaAdminUsers, `Erro ao carregar usuários: ${e.message}`);
+        setListMessage(corpoTabelaAdminUsers, `<tr><td colspan="5">Erro ao carregar usuários: ${e.message}</td></tr>`);
         showToast(`Erro ao carregar usuários: ${e.message}`, 'error');
     }
 }
@@ -1497,7 +1562,7 @@ function renderizarTabelaAdminUsers(users, page = 1) {
     const paginatedItems = users.slice(start, end);
 
     if (paginatedItems.length === 0) {
-        corpoTabelaAdminUsers.innerHTML = `<tr><td colspan="5"><p class="empty-state-message">Nenhum usuário encontrado.</p></td></tr>`;
+        setListMessage(corpoTabelaAdminUsers, `<tr><td colspan="5">Nenhum usuário encontrado.</td></tr>`);
     } else {
         paginatedItems.forEach(user => {
             const tr = document.createElement('tr');
@@ -1516,8 +1581,13 @@ function renderizarTabelaAdminUsers(users, page = 1) {
             corpoTabelaAdminUsers.appendChild(tr);
         });
     }
-    // setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)); 
-    // Você precisará adicionar <div class="pagination-controls" id="pagination-admin-users"></div> no HTML para esta tabela de admin se quiser paginação nela.
+    
+    const paginationContainerForAdminUsers = document.getElementById('pagination-admin-users'); // Certifique-se que este div existe no HTML
+    if (paginationContainerForAdminUsers) {
+         setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', 
+            (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)
+        ); 
+    }
 }
 
 if (corpoTabelaAdminUsers) {
@@ -1528,6 +1598,7 @@ if (corpoTabelaAdminUsers) {
         const username = targetButton.dataset.username;
 
         if (targetButton.classList.contains('btn-edit-user-role')) {
+            adminEditUserId = userId; 
             if (editUserIdInput) editUserIdInput.value = userId;
             if (editUserUsernameDisplay) editUserUsernameDisplay.textContent = username;
             if (editUserRoleSelect) editUserRoleSelect.value = targetButton.dataset.role;
@@ -1542,7 +1613,7 @@ if (corpoTabelaAdminUsers) {
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.message || `Erro ao deletar usuário: ${response.status}`);
                     showToast(data.message, 'success');
-                    carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers, currentFiltersAdminUsers); // Recarrega lista
+                    carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers, currentFiltersAdminUsers); 
                 } catch (error) {
                     hideLoading(); console.error("Erro ao deletar usuário:", error);
                     showToast(`Falha ao deletar usuário: ${error.message}`, 'error');
@@ -1554,13 +1625,13 @@ if (corpoTabelaAdminUsers) {
 
 async function handleEditUserRoleSubmit(event) {
     event.preventDefault();
-    if (!editUserIdInput || !editUserRoleSelect || !editUserRoleErrorMessage) return;
-    const userId = editUserIdInput.value;
+    if (!adminEditUserId || !editUserRoleSelect || !editUserRoleErrorMessage) return;
     const newRole = editUserRoleSelect.value;
-    if (!userId || !newRole) { showToast("Informações do usuário ou papel inválidas.", "error"); return; }
+    if (!newRole) { showToast("Papel inválido.", "error"); return; }
+
     showLoading();
     try {
-        const response = await fetch(`${API_URL_ADMIN_USERS}/${userId}/role`, {
+        const response = await fetch(`${API_URL_ADMIN_USERS}/${adminEditUserId}/role`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: newRole }), credentials: 'include'
         });
@@ -1569,6 +1640,7 @@ async function handleEditUserRoleSubmit(event) {
         if (!response.ok) throw new Error(data.message || `Erro ao alterar papel: ${response.status}`);
         showToast(data.message, 'success');
         if(modalEditUserRole) modalEditUserRole.style.display = 'none';
+        adminEditUserId = null; 
         carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers, currentFiltersAdminUsers);
     } catch (error) {
         hideLoading(); console.error("Erro ao alterar papel:", error);
