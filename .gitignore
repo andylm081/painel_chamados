@@ -1,0 +1,24 @@
+# Ambiente Virtual Python
+venv/
+backend/venv/
+backend/.env 
+
+# Arquivos de Bytecode e Cache Python
+__pycache__/
+backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de Dados SQLite (se você mantiver um para fallback local)
+*.sqlite3
+gestao_chamados_local.db 
+backend/gestao_chamados_local.db 
+instance/
+backend/instance/
+
+# Arquivos de IDE e Sistema
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db

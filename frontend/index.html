@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Acompanhamento de Chamados - Magnum Tires</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+    <div id="loading-indicator" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Carregando Dados...</p>
+    </div>
+
+    <header>
+        <div class="container">
+            <img src="img/MARCA-MAGNUM-TIRES-FINAL-2021-02-4.png" alt="Logo Magnum Tires" id="logo">
+            <h1>Painel de Acompanhamento de Chamados</h1>
+            <div id="auth-status" class="auth-status">
+                <button id="btn-show-login-modal" class="btn btn-secondary btn-sm">Login</button>
+                <button id="btn-show-register-modal" class="btn btn-primary btn-sm">Registrar</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="main-app-content" style="display: none;"> 
+        <nav class="container">
+            <ul>
+                <li><a href="#" class="active" data-target="chamados-pagamento-section">Chamados de Pagamento</a></li>
+                <li><a href="#" data-target="chamados-diversos-section">Chamados Diversos</a></li>
+                <li><a href="#" data-target="fornecedores-section">Fornecedores</a></li>
+                <li><a href="#" data-target="admin-users-section" id="nav-admin-users" class="master-only-nav" style="display:none;">Gerenciar Usuários</a></li>
+            </ul>
+        </nav>
+        <main class="container">
+            <section id="chamados-pagamento-section" class="content-section active">
+                 <div class="section-header">
+                    <h2>Acompanhamento: Chamados de Pagamento</h2>
+                    <div>
+                        <button id="btn-atualizar-chamados-pag" class="btn btn-secondary">Atualizar</button>
+                        <button id="btn-abrir-modal-registrar-chamado-pag" class="btn btn-primary">Registrar Chamado Pag.</button>
+                    </div>
+                </div>
+                <div class="list-controls">
+                    <div class="filters">
+                        <input type="text" id="filtro-fornecedor-chamado-pag" class="filter-input" data-list="lista-chamados-pagamento" data-fieldkey="nome_fornecedor" placeholder="Filtrar por fornecedor...">
+                        <select id="filtro-situacao-chamado-pag" class="filter-input" data-list="lista-chamados-pagamento" data-fieldkey="situacao">
+                            <option value="">Todas Situações</option>
+                            <option value="Pendente">Pendente</option><option value="Em andamento">Em Andamento</option><option value="Pago">Pago</option>
+                            <option value="Atrasado">Atrasado</option><option value="Cancelado">Cancelado</option>
+                        </select>
+                         <input type="text" id="filtro-owner-chamado-pag" class="filter-input master-only-filter" data-list="lista-chamados-pagamento" data-fieldkey="owner_username" placeholder="Usuário (Master)" style="display:none;">
+                    </div>
+                    <div class="sort-controls">
+                        <label for="sort-chamado-pag">Ordenar por:</label>
+                        <select id="sort-chamado-pag" class="sort-select" data-list="lista-chamados-pagamento">
+                            <option value="data_vencimento_desc">Vencimento (Mais Recente)</option>
+                            <option value="data_vencimento_asc">Vencimento (Mais Antigo)</option>
+                            <option value="numero_chamado_origem_asc">N° Chamado (A-Z)</option>
+                            <option value="valor_desc">Valor (Maior)</option>
+                            <option value="valor_asc">Valor (Menor)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="lista-chamados-pagamento" class="chamados-grid"><p class="empty-state-message">Carregando chamados...</p></div>
+                <div class="pagination-controls" id="pagination-chamados-pag"></div>
+            </section>
+
+            <section id="chamados-diversos-section" class="content-section" style="display: none;">
+                 <div class="section-header">
+                    <h2>Acompanhamento: Chamados Diversos</h2>
+                     <div>
+                        <button id="btn-atualizar-chamados-div" class="btn btn-secondary">Atualizar</button>
+                        <button id="btn-abrir-modal-registrar-chamado-div" class="btn btn-primary">Registrar Chamado Div.</button>
+                    </div>
+                </div>
+                 <div class="list-controls">
+                    <div class="filters">
+                        <input type="text" id="filtro-fornecedor-chamado-div" class="filter-input" data-list="lista-chamados-diversos" data-fieldkey="nome_fornecedor" placeholder="Filtrar por fornecedor...">
+                         <select id="filtro-situacao-chamado-div" class="filter-input" data-list="lista-chamados-diversos" data-fieldkey="situacao">
+                            <option value="">Todas Situações</option>
+                            <option value="Aberto">Aberto</option><option value="Em análise">Em Análise</option>
+                            <option value="Pendente Informação">Pendente Informação</option>
+                            <option value="Resolvido">Resolvido</option><option value="Fechado">Fechado</option>
+                        </select>
+                        <input type="text" id="filtro-owner-chamado-div" class="filter-input master-only-filter" data-list="lista-chamados-diversos" data-fieldkey="owner_username" placeholder="Usuário (Master)" style="display:none;">
+                    </div>
+                    <div class="sort-controls">
+                         <label for="sort-chamado-div">Ordenar por:</label>
+                        <select id="sort-chamado-div" class="sort-select" data-list="lista-chamados-diversos">
+                            <option value="data_escrituracao_desc">Data (Mais Recente)</option>
+                            <option value="data_escrituracao_asc">Data (Mais Antiga)</option>
+                            <option value="numero_chamado_origem_asc">N° Chamado (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="lista-chamados-diversos" class="chamados-grid"><p class="empty-state-message">Carregando chamados...</p></div>
+                <div class="pagination-controls" id="pagination-chamados-div"></div>
+            </section>
+
+            <section id="fornecedores-section" class="content-section" style="display: none;">
+                <div class="section-header"><h2>Fornecedores</h2><button id="btn-abrir-modal-novo-fornecedor" class="btn btn-primary">Novo Fornecedor</button></div>
+                <div class="list-controls">
+                    <div class="filters">
+                        <input type="text" id="filtro-nome-fornecedor" class="filter-input" data-list="corpo-tabela-fornecedores" data-fieldkey="nome_fornecedor" placeholder="Filtrar por nome...">
+                        <input type="text" id="filtro-numid-fornecedor" class="filter-input" data-list="corpo-tabela-fornecedores" data-fieldkey="numero_identificacao_fornecedor" placeholder="Filtrar por N° ID...">
+                        <input type="text" id="filtro-owner-fornecedor" class="filter-input master-only-filter" data-list="corpo-tabela-fornecedores" data-fieldkey="owner_username" placeholder="Usuário (Master)" style="display:none;">
+                    </div>
+                </div>
+                <div class="table-container"><table id="tabela-fornecedores"><thead><tr><th data-sortkey="id">ID <span class="sort-arrow"></span></th><th data-sortkey="nome_fornecedor">Nome <span class="sort-arrow"></span></th><th data-sortkey="numero_identificacao_fornecedor">N° ID <span class="sort-arrow"></span></th><th class="owner-column" data-sortkey="owner_username" style="display:none;">Usuário <span class="sort-arrow"></span></th><th>Ações</th></tr></thead><tbody id="corpo-tabela-fornecedores"></tbody></table></div>
+                <div class="pagination-controls" id="pagination-fornecedores"></div>
+            </section>
+
+            <section id="admin-users-section" class="content-section master-only-section" style="display: none;">
+                <div class="section-header"><h2>Gerenciar Usuários</h2></div>
+                <div class="table-container">
+                    <table id="tabela-admin-users">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Papel (Role)</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-admin-users">
+                            </tbody>
+                    </table>
+                </div>
+                </section>
+        </main>
+    </div> 
+    
+    <div id="auth-section-placeholder" style="text-align: center; padding: 50px; display: block;">
+        <p>Por favor, faça login ou registre-se para acessar o painel.</p>
+    </div>
+
+    <div id="modal-registrar-editar-chamado-pag" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-modal-registrar-editar-chamado-pag">&times;</span>
+            <h2 id="modal-chamado-pag-titulo">Registrar Chamado Pag.</h2>
+            <form id="form-registrar-editar-chamado-pag">
+                <input type="hidden" id="chamado_pag_id_edicao">
+                <div class="form-group"><label for="nome_fornecedor_input_pag">Nome Fornecedor:</label><input type="text" id="nome_fornecedor_input_pag" name="nome_fornecedor_input" list="fornecedores-datalist" autocomplete="off" required><datalist id="fornecedores-datalist"></datalist><input type="hidden" id="fornecedor_id_hidden_pag" name="fornecedor_id"></div>
+                <div class="form-group"><label for="numero_identificacao_fornecedor_input_pag">N° ID Fornecedor (p/ novo):</label><input type="text" id="numero_identificacao_fornecedor_input_pag" name="numero_identificacao_fornecedor_input"></div>
+                <div class="form-group"><label for="numero_chamado_origem_pag">N° Chamado Externo:</label><input type="text" id="numero_chamado_origem_pag" name="numero_chamado_origem" required></div>
+                <div class="form-group"><label for="numero_fatura_pag">N° Fatura:</label><input type="text" id="numero_fatura_pag" name="numero_fatura" required></div>
+                <div class="form-group"><label for="lancamento_pag">Lançamento:</label><input type="text" id="lancamento_pag" name="lancamento"></div>
+                <div class="form-group"><label for="valor_pag">Valor (R$):</label><input type="number" step="0.01" id="valor_pag" name="valor" required placeholder="Ex: 1234.50"></div>
+                <div class="form-group"><label for="data_escrituracao_pag">Data Escrituração (Registro):</label><input type="date" id="data_escrituracao_pag" name="data_escrituracao"></div>
+                <div class="form-group"><label for="prazo_maximo_escrituracao_pag">Prazo Máx. Escrituração:</label><input type="date" id="prazo_maximo_escrituracao_pag" name="prazo_maximo_escrituracao"></div>
+                <div class="form-group"><label for="data_vencimento_pag">Data Vencimento:</label><input type="date" id="data_vencimento_pag" name="data_vencimento" required></div>
+                <div class="form-group"><label for="situacao_pag">Situação Inicial:</label><select id="situacao_pag" name="situacao" required><option value="Pendente">Pendente</option><option value="Em andamento">Em Andamento</option><option value="Pago">Pago</option><option value="Atrasado">Atrasado</option><option value="Cancelado">Cancelado</option></select></div>
+                <div class="form-group"><label for="observacoes_gerais_pag">Observações Iniciais:</label><textarea id="observacoes_gerais_pag" name="observacoes_gerais" rows="3"></textarea></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" id="btn-cancelar-modal-chamado-pag">Cancelar</button></div>
+                <p id="modal-chamado-pag-error-message" class="error-message" style="display:none;"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-registrar-editar-chamado-div" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-modal-registrar-editar-chamado-div">&times;</span>
+            <h2 id="modal-chamado-div-titulo">Registrar Chamado Div.</h2>
+            <form id="form-registrar-editar-chamado-div">
+                <input type="hidden" id="chamado_div_id_edicao">
+                <div class="form-group"><label for="numero_chamado_origem_div">N° Chamado Externo:</label><input type="text" id="numero_chamado_origem_div" name="numero_chamado_origem" required></div>
+                <div class="form-group"><label for="nome_fornecedor_input_div">Nome Fornecedor (opc.):</label><input type="text" id="nome_fornecedor_input_div" name="nome_fornecedor_input" list="fornecedores-datalist-div" autocomplete="off"><datalist id="fornecedores-datalist-div"></datalist><input type="hidden" id="fornecedor_id_hidden_div" name="fornecedor_id"></div>
+                <div class="form-group"><label for="numero_identificacao_fornecedor_input_div">N° ID Fornecedor (p/ novo):</label><input type="text" id="numero_identificacao_fornecedor_input_div" name="numero_identificacao_fornecedor_input"></div>
+                <div class="form-group"><label for="valor_div">Valor (R$) (opc.):</label><input type="number" step="0.01" id="valor_div" name="valor" placeholder="Ex: 123.45"></div>
+                <div class="form-group"><label for="data_escrituracao_div">Data Ocorrência/Criação Externa:</label><input type="date" id="data_escrituracao_div" name="data_escrituracao" required></div>
+                <div class="form-group"><label for="situacao_div">Situação Inicial:</label><select id="situacao_div" name="situacao" required><option value="Aberto">Aberto</option><option value="Em análise">Em Análise</option><option value="Pendente Informação">Pendente Informação</option><option value="Resolvido">Resolvido</option><option value="Fechado">Fechado</option></select></div>
+                <div class="form-group"><label for="observacoes_div">Observações Iniciais:</label><textarea id="observacoes_div" name="observacoes" rows="3"></textarea></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" id="btn-cancelar-modal-chamado-div">Cancelar</button></div>
+                <p id="modal-chamado-div-error-message" class="error-message" style="display:none;"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-acompanhamentos-chamado-pag" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-button" id="close-modal-acompanhamentos-chamado-pag">&times;</span>
+            <h2 id="acompanhamentos-chamado-pag-titulo">Acompanhamentos</h2>
+            <div id="acompanhamentos-chamado-pag-info" class="chamado-details-info"></div> <hr>
+            <h3>Histórico de Acompanhamentos</h3>
+            <div id="acompanhamentos-chamado-pag-lista" class="acompanhamento-lista"></div>
+            <h4>Adicionar Novo Acompanhamento</h4>
+            <form id="form-novo-acompanhamento-pag">
+                <input type="hidden" id="acompanhamento_chamado_pag_id">
+                <div class="form-group"><label for="acompanhamento-pag-descricao">Descrição:</label><textarea id="acompanhamento-pag-descricao" rows="3" required></textarea></div>
+                <div class="form-group"><label for="acompanhamento-pag-usuario">Registrado por:</label><input type="text" id="acompanhamento-pag-usuario" placeholder="Seu nome/Usuário"></div>
+                <button type="submit" class="btn btn-primary">Adicionar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-acompanhamentos-chamado-div" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-button" id="close-modal-acompanhamentos-chamado-div">&times;</span>
+            <h2 id="acompanhamentos-chamado-div-titulo">Acompanhamentos</h2>
+            <div id="acompanhamentos-chamado-div-info" class="chamado-details-info"></div> <hr>
+            <h3>Histórico de Acompanhamentos</h3>
+            <div id="acompanhamentos-chamado-div-lista" class="acompanhamento-lista"></div>
+            <h4>Adicionar Novo Acompanhamento</h4>
+            <form id="form-novo-acompanhamento-div">
+                <input type="hidden" id="acompanhamento_chamado_div_id">
+                <div class="form-group"><label for="acompanhamento-div-descricao">Descrição:</label><textarea id="acompanhamento-div-descricao" rows="3" required></textarea></div>
+                <div class="form-group"><label for="acompanhamento-div-usuario">Registrado por:</label><input type="text" id="acompanhamento-div-usuario" placeholder="Seu nome/Usuário"></div>
+                <button type="submit" class="btn btn-primary">Adicionar</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="modal-novo-editar-fornecedor" class="modal">
+         <div class="modal-content">
+            <span class="close-button" id="close-modal-novo-editar-fornecedor">&times;</span>
+            <h2 id="modal-fornecedor-titulo">Novo Fornecedor</h2>
+            <form id="form-novo-editar-fornecedor">
+                <input type="hidden" id="fornecedor-id-edicao">
+                <div class="form-group"><label for="fornecedor-nome">Nome do Fornecedor:</label><input type="text" id="fornecedor-nome" required></div>
+                <div class="form-group"><label for="fornecedor-num-id">N° Identificação (opcional):</label><input type="text" id="fornecedor-num-id"></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" id="btn-cancelar-modal-fornecedor">Cancelar</button></div>
+                 <p id="modal-fornecedor-error-message" class="error-message" style="display:none;"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-login" class="modal">
+        <div class="modal-content auth-modal">
+            <span class="close-button" id="close-login-modal">&times;</span>
+            <h2>Login</h2>
+            <form id="form-login">
+                <div class="form-group"><label for="login-username">Nome de Usuário:</label><input type="text" id="login-username" required></div>
+                <div class="form-group"><label for="login-password">Senha:</label><input type="password" id="login-password" required></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Entrar</button><button type="button" class="btn btn-secondary" id="btn-cancel-login-modal">Cancelar</button></div>
+                <p id="login-error-message" class="error-message" style="display:none;"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-register" class="modal">
+        <div class="modal-content auth-modal">
+            <span class="close-button" id="close-register-modal">&times;</span>
+            <h2>Registrar Novo Usuário</h2>
+            <form id="form-register">
+                <div class="form-group"><label for="register-username">Nome de Usuário:</label><input type="text" id="register-username" required></div>
+                <div class="form-group"><label for="register-email">Email:</label><input type="email" id="register-email" required></div>
+                <div class="form-group"><label for="register-password">Senha (mín. 6 caracteres):</label><input type="password" id="register-password" required minlength="6"></div>
+                 <div class="form-group"><label for="register-confirm-password">Confirmar Senha:</label><input type="password" id="register-confirm-password" required minlength="6"></div>
+                <div class="form-actions"><button type="submit" class="btn btn-primary">Registrar</button><button type="button" class="btn btn-secondary" id="btn-cancel-register-modal">Cancelar</button></div>
+                <p id="register-error-message" class="error-message" style="display:none;"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-edit-user-role" class="modal">
+        <div class="modal-content auth-modal">
+            <span class="close-button" id="close-modal-edit-user-role">&times;</span>
+            <h2 id="modal-edit-user-role-titulo">Editar Papel do Usuário</h2>
+            <form id="form-edit-user-role">
+                <input type="hidden" id="edit-user-id">
+                <p>Usuário: <strong id="edit-user-username-display"></strong></p>
+                <div class="form-group">
+                    <label for="edit-user-role-select">Novo Papel:</label>
+                    <select id="edit-user-role-select">
+                        <option value="user">User</option>
+                        <option value="master">Master</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Salvar Papel</button>
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-edit-user-role">Cancelar</button>
+                </div>
+                <p id="edit-user-role-error-message" class="error-message" style="display:none;"></p>
+            </form>
+        </div>
+    </div>
+    
+    <footer id="main-footer"> <div class="container"> <p>Desenvolvido por Anderson Lima &copy; <span id="currentYear"></span> Magnum Tires. Todos os direitos reservados.</p> </div> </footer>
+    <script src="js/script.js"></script>
+</body>
+</html>

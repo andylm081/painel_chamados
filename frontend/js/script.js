@@ -1,0 +1,1546 @@
+// --- Constantes de API ---
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
+const AUTH_API_URL = 'http://127.0.0.1:5000'; 
+const API_URL_PAGAMENTOS = `${API_BASE_URL}/chamados_pagamento`;
+const API_URL_FORNECEDORES = `${API_BASE_URL}/fornecedores`;
+const API_URL_DIVERSOS = `${API_BASE_URL}/chamados_diversos`;
+const API_URL_ADMIN_USERS = `${API_BASE_URL}/admin/users`;
+
+// --- Seletores Globais ---
+const currentYearSpan = document.getElementById('currentYear');
+const navLinks = document.querySelectorAll('nav ul li a');
+const contentSections = document.querySelectorAll('.content-section');
+const toastContainer = document.getElementById('toast-container');
+const loadingIndicator = document.getElementById('loading-indicator');
+const mainAppContentDiv = document.getElementById('main-app-content');
+const authStatusDiv = document.getElementById('auth-status');
+const authSectionPlaceholder = document.getElementById('auth-section-placeholder');
+
+// Modais e Forms de Autenticação
+const modalLogin = document.getElementById('modal-login');
+const formLogin = document.getElementById('form-login');
+const btnCloseLoginModal = document.getElementById('close-login-modal');
+const btnCancelLoginModal = document.getElementById('btn-cancel-login-modal');
+const loginErrorMessage = document.getElementById('login-error-message');
+
+const modalRegister = document.getElementById('modal-register');
+const formRegister = document.getElementById('form-register');
+const btnCloseRegisterModal = document.getElementById('close-register-modal');
+const btnCancelRegisterModal = document.getElementById('btn-cancel-register-modal');
+const registerErrorMessage = document.getElementById('register-error-message');
+
+// Aba Admin Usuários
+const navAdminUsersLink = document.getElementById('nav-admin-users');
+const corpoTabelaAdminUsers = document.getElementById('corpo-tabela-admin-users');
+const modalEditUserRole = document.getElementById('modal-edit-user-role');
+const formEditUserRole = document.getElementById('form-edit-user-role');
+const btnCloseModalEditUserRole = document.getElementById('close-modal-edit-user-role');
+const btnCancelEditUserRole = document.getElementById('btn-cancel-edit-user-role');
+const editUserIdInput = document.getElementById('edit-user-id');
+const editUserUsernameDisplay = document.getElementById('edit-user-username-display');
+const editUserRoleSelect = document.getElementById('edit-user-role-select');
+const editUserRoleErrorMessage = document.getElementById('edit-user-role-error-message');
+
+// Chamado Pagamento
+const listaChamadosPagamentoDiv = document.getElementById('lista-chamados-pagamento');
+const btnAtualizarChamadosPag = document.getElementById('btn-atualizar-chamados-pag');
+const modalRegistrarEditarChamadoPag = document.getElementById('modal-registrar-editar-chamado-pag');
+const formRegistrarEditarChamadoPag = document.getElementById('form-registrar-editar-chamado-pag');
+const modalChamadoPagTitulo = document.getElementById('modal-chamado-pag-titulo');
+const modalChamadoPagErrorMessage = document.getElementById('modal-chamado-pag-error-message');
+const btnAbrirModalRegistrarChamadoPag = document.getElementById('btn-abrir-modal-registrar-chamado-pag');
+const btnCloseModalRegistrarEditarChamadoPag = document.getElementById('close-modal-registrar-editar-chamado-pag');
+const btnCancelarModalChamadoPag = document.getElementById('btn-cancelar-modal-chamado-pag');
+const inputNomeFornecedorChamadoPag = document.getElementById('nome_fornecedor_input_pag');
+const datalistFornecedores = document.getElementById('fornecedores-datalist');
+const inputHiddenFornecedorIdChamadoPag = document.getElementById('fornecedor_id_hidden_pag');
+const inputNumIdFornecedorChamadoPag = document.getElementById('numero_identificacao_fornecedor_input_pag');
+const inputChamadoPagIdEdicao = document.getElementById('chamado_pag_id_edicao');
+const sortChamadoPagSelect = document.getElementById('sort-chamado-pag');
+const paginationChamadosPagDiv = document.getElementById('pagination-chamados-pag');
+
+// Modal Acompanhamentos Chamado Pagamento
+const modalAcompanhamentosChamadoPag = document.getElementById('modal-acompanhamentos-chamado-pag');
+const acompanhamentosChamadoPagTitulo = document.getElementById('acompanhamentos-chamado-pag-titulo');
+const acompanhamentosChamadoPagInfo = document.getElementById('acompanhamentos-chamado-pag-info');
+const acompanhamentosChamadoPagLista = document.getElementById('acompanhamentos-chamado-pag-lista');
+const formNovoAcompanhamentoPag = document.getElementById('form-novo-acompanhamento-pag');
+const acompanhamentoChamadoPagIdInput = document.getElementById('acompanhamento_chamado_pag_id');
+const btnCloseModalAcompanhamentosChamadoPag = document.getElementById('close-modal-acompanhamentos-chamado-pag');
+
+// Fornecedores
+const btnAbrirModalNovoFornecedor = document.getElementById('btn-abrir-modal-novo-fornecedor');
+const corpoTabelaFornecedores = document.getElementById('corpo-tabela-fornecedores');
+const tabelaFornecedores = document.getElementById('tabela-fornecedores');
+const modalNovoEditarFornecedor = document.getElementById('modal-novo-editar-fornecedor');
+const modalFornecedorTitulo = document.getElementById('modal-fornecedor-titulo');
+const formNovoEditarFornecedor = document.getElementById('form-novo-editar-fornecedor');
+const inputFornecedorIdEdicao = document.getElementById('fornecedor-id-edicao');
+const inputFornecedorNomeForm = document.getElementById('fornecedor-nome');
+const inputFornecedorNumIdForm = document.getElementById('fornecedor-num-id');
+const btnCloseModalFornecedor = document.getElementById('close-modal-novo-editar-fornecedor');
+const btnCancelarModalFornecedor = document.getElementById('btn-cancelar-modal-fornecedor');
+const modalFornecedorErrorMessage = document.getElementById('modal-fornecedor-error-message');
+const tabelaFornecedoresHeaders = document.querySelectorAll('#tabela-fornecedores th[data-sortkey]');
+const paginationFornecedoresDiv = document.getElementById('pagination-fornecedores');
+
+// Chamados Diversos
+const listaChamadosDiversosDiv = document.getElementById('lista-chamados-diversos');
+const btnAtualizarChamadosDiv = document.getElementById('btn-atualizar-chamados-div');
+const btnAbrirModalRegistrarChamadoDiv = document.getElementById('btn-abrir-modal-registrar-chamado-div');
+const modalRegistrarEditarChamadoDiv = document.getElementById('modal-registrar-editar-chamado-div');
+const formRegistrarEditarChamadoDiv = document.getElementById('form-registrar-editar-chamado-div');
+const modalChamadoDivTitulo = document.getElementById('modal-chamado-div-titulo');
+const modalChamadoDivErrorMessage = document.getElementById('modal-chamado-div-error-message');
+const btnCloseModalRegistrarEditarChamadoDiv = document.getElementById('close-modal-registrar-editar-chamado-div');
+const btnCancelarModalChamadoDiv = document.getElementById('btn-cancelar-modal-chamado-div');
+const inputNomeFornecedorChamadoDiv = document.getElementById('nome_fornecedor_input_div');
+const datalistFornecedoresDiv = document.getElementById('fornecedores-datalist-div');
+const inputHiddenFornecedorIdChamadoDiv = document.getElementById('fornecedor_id_hidden_div');
+const inputNumIdFornecedorChamadoDiv = document.getElementById('numero_identificacao_fornecedor_input_div');
+const inputChamadoDivIdEdicao = document.getElementById('chamado_div_id_edicao');
+const sortChamadoDivSelect = document.getElementById('sort-chamado-div');
+const paginationChamadosDiv = document.getElementById('pagination-chamados-div');
+
+// Modal Acompanhamentos Chamado Diverso
+const modalAcompanhamentosChamadoDiv = document.getElementById('modal-acompanhamentos-chamado-div');
+const acompanhamentosChamadoDivTitulo = document.getElementById('acompanhamentos-chamado-div-titulo');
+const acompanhamentosChamadoDivInfo = document.getElementById('acompanhamentos-chamado-div-info');
+const acompanhamentosChamadoDivLista = document.getElementById('acompanhamentos-chamado-div-lista');
+const formNovoAcompanhamentoDiv = document.getElementById('form-novo-acompanhamento-div');
+const acompanhamentoChamadoDivIdInput = document.getElementById('acompanhamento_chamado_div_id');
+const btnCloseModalAcompanhamentosChamadoDiv = document.getElementById('close-modal-acompanhamentos-chamado-div');
+
+// Estado da Aplicação
+let currentUser = null;
+let chamadoPagAtualParaEdicaoId = null;
+let chamadoDivAtualParaEdicaoId = null;
+let fornecedorAtualParaEdicaoId = null;
+let adminEditUserId = null;
+
+let todosFornecedoresCache = [];
+let todosChamadosPagCache = [];
+let todosChamadosDivCache = [];
+let todosUsuariosCache = []; 
+
+const ITEMS_PER_PAGE_CARDS = 6;
+const ITEMS_PER_PAGE_TABLE = 10;
+
+let currentPagePag = 1, currentPageDiv = 1, currentPageForn = 1, currentPageAdminUsers = 1;
+let currentSortPag = 'data_vencimento_desc', currentSortDiv = 'data_escrituracao_desc';
+let currentSortForn = { key: 'nome_fornecedor', direction: 'asc' };
+let currentSortAdminUsers = { key: 'username', direction: 'asc' };
+let currentFiltersPag = {}, currentFiltersDiv = {}, currentFiltersForn = {}, currentFiltersAdminUsers = {};
+
+
+// --- Funções Auxiliares ---
+function showToast(message, type = 'info') {
+    if (!toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => { toast.classList.add('show'); }, 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 500);
+    }, 3000 + (type === 'error' ? 2000 : 0));
+}
+
+function showLoading(show = true) {
+    if (loadingIndicator) loadingIndicator.style.display = show ? 'flex' : 'none';
+}
+function hideLoading() { 
+    if (loadingIndicator) loadingIndicator.style.display = 'none'; 
+}
+
+function setListMessage(listDiv, message) {
+    if (listDiv) listDiv.innerHTML = `<p class="empty-state-message">${message}</p>`;
+}
+
+function formatarStatusParaClasse(status) { return status ? status.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '') : 'desconhecido'; }
+const formatDateForDisplay = (dateString) => { if (!dateString) return 'N/A'; const date = new Date(dateString.includes('T') ? dateString : dateString + 'T00:00:00Z'); return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' }); };
+const formatDateForInput = (dateString) => { if (!dateString) return ''; const date = new Date(dateString.includes('T') ? dateString : dateString + 'T00:00:00Z'); return date.toISOString().split('T')[0]; };
+
+// --- Autenticação ---
+async function checkAuthStatus() {
+    showLoading();
+    try {
+        const response = await fetch(`${AUTH_API_URL}/api/check_auth_status`, { credentials: 'include' });
+        const data = await response.json();
+        hideLoading(); 
+        if (data.logged_in) {
+            currentUser = data.user;
+            updateAuthUI(true);
+        } else {
+            currentUser = null;
+            updateAuthUI(false);
+        }
+    } catch (error) {
+        hideLoading(); 
+        console.error("Erro ao verificar auth:", error);
+        currentUser = null;
+        updateAuthUI(false);
+        showToast("Servidor de autenticação indisponível. Tente novamente mais tarde.", "error");
+    }
+}
+
+function updateAuthUI(isLoggedIn) {
+    if (isLoggedIn && currentUser) {
+        if (mainAppContentDiv) mainAppContentDiv.style.display = 'block';
+        if (authSectionPlaceholder) authSectionPlaceholder.style.display = 'none';
+        if (authStatusDiv) {
+            authStatusDiv.innerHTML = `<span>Bem-vindo, ${currentUser.username}! <span class="user-role">(${currentUser.role})</span></span> <button id="btn-logout" class="btn btn-danger btn-sm">Logout</button>`;
+            const btnLogout = document.getElementById('btn-logout');
+            if (btnLogout) btnLogout.addEventListener('click', handleLogout);
+        }
+        
+        document.querySelectorAll('.master-only-filter').forEach(el => {
+            el.style.display = currentUser.role === 'master' ? 'inline-block' : 'none';
+        });
+        document.querySelectorAll('.owner-column').forEach(el => { 
+            el.style.display = currentUser.role === 'master' ? '' : 'none'; 
+        });
+        if(navAdminUsersLink) navAdminUsersLink.style.display = currentUser.role === 'master' ? 'list-item' : 'none';
+
+
+        const activeLink = document.querySelector('nav ul li a.active');
+        if (activeLink) {
+            const targetId = activeLink.getAttribute('data-target');
+            if (targetId === 'chamados-pagamento-section') buscarChamadosPagamento();
+            else if (targetId === 'fornecedores-section') carregarErenderizarFornecedores();
+            else if (targetId === 'chamados-diversos-section') buscarChamadosDiversos();
+            else if (targetId === 'admin-users-section' && currentUser.role === 'master') carregarErenderizarAdminUsers();
+        } else { 
+            const firstTabLink = document.querySelector('nav ul li a');
+            if (firstTabLink) firstTabLink.click(); 
+            else buscarChamadosPagamento();
+        }
+        carregarFornecedoresGlobais(); 
+        setupFilterListeners(); 
+        setupSortListeners(); 
+    } else {
+        if (mainAppContentDiv) mainAppContentDiv.style.display = 'none';
+        if (authSectionPlaceholder) authSectionPlaceholder.style.display = 'block';
+        if(navAdminUsersLink) navAdminUsersLink.style.display = 'none';
+        if (authStatusDiv) {
+            authStatusDiv.innerHTML = `<button id="btn-show-login-modal-main" class="btn btn-secondary btn-sm">Login</button> <button id="btn-show-register-modal-main" class="btn btn-primary btn-sm">Registrar</button>`;
+            const btnShowLogin = document.getElementById('btn-show-login-modal-main');
+            const btnShowRegister = document.getElementById('btn-show-register-modal-main');
+            if (btnShowLogin && modalLogin) btnShowLogin.addEventListener('click', () => { modalLogin.style.display = 'block'; if (formLogin) formLogin.reset(); if(loginErrorMessage) loginErrorMessage.style.display = 'none'; });
+            if (btnShowRegister && modalRegister) btnShowRegister.addEventListener('click', () => { modalRegister.style.display = 'block'; if (formRegister) formRegister.reset(); if(registerErrorMessage) registerErrorMessage.style.display = 'none'; });
+        }
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault(); if (loginErrorMessage) loginErrorMessage.style.display = 'none';
+    const usernameInput = document.getElementById('login-username'); const passwordInput = document.getElementById('login-password');
+    if (!usernameInput || !passwordInput) return;
+    const username = usernameInput.value; const password = passwordInput.value;
+    showLoading();
+    try {
+        const response = await fetch(`${AUTH_API_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }), credentials: 'include' });
+        const data = await response.json(); 
+        if (response.ok) { currentUser = data.user; if (modalLogin) modalLogin.style.display = 'none'; if (formLogin) formLogin.reset(); updateAuthUI(true); showToast(data.message, 'success'); }
+        else { throw new Error(data.message || "Erro no login."); }
+    } catch (error) { console.error("Erro login:", error); if (loginErrorMessage) { loginErrorMessage.textContent = error.message; loginErrorMessage.style.display = 'block'; } showToast(`Erro login: ${error.message}`, 'error'); 
+    } finally { hideLoading(); }
+}
+
+async function handleRegister(event) {
+    event.preventDefault(); if (registerErrorMessage) registerErrorMessage.style.display = 'none';
+    const usernameInput = document.getElementById('register-username'); const emailInput = document.getElementById('register-email');
+    const passwordInput = document.getElementById('register-password'); const confirmPasswordInput = document.getElementById('register-confirm-password');
+    if(!usernameInput || !emailInput || !passwordInput || !confirmPasswordInput) return;
+    const username = usernameInput.value; const email = emailInput.value;
+    const password = passwordInput.value; const confirmPassword = confirmPasswordInput.value;
+    if (password !== confirmPassword) { if (registerErrorMessage) { registerErrorMessage.textContent = "As senhas não coincidem."; registerErrorMessage.style.display = 'block'; } showToast("As senhas não coincidem.", "error"); return; }
+    showLoading();
+    try {
+        const response = await fetch(`${AUTH_API_URL}/api/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email, password }) });
+        const data = await response.json(); 
+        if (response.ok) { if (modalRegister) modalRegister.style.display = 'none'; if (formRegister) formRegister.reset(); showToast(data.message + " Por favor, faça o login.", 'success'); if (modalLogin) modalLogin.style.display = 'block'; }
+        else { throw new Error(data.message || "Erro no registro."); }
+    } catch (error) { console.error("Erro registro:", error); if (registerErrorMessage) { registerErrorMessage.textContent = error.message; registerErrorMessage.style.display = 'block'; } showToast(`Erro registro: ${error.message}`, 'error'); 
+    } finally { hideLoading(); }
+}
+
+async function handleLogout() {
+    showLoading();
+    try {
+        const response = await fetch(`${AUTH_API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+        const data = await response.json(); 
+        if (response.ok) { currentUser = null; todosFornecedoresCache = []; todosChamadosPagCache = []; todosChamadosDivCache = []; updateAuthUI(false); showToast(data.message, 'success'); }
+        else { throw new Error(data.message || "Erro no logout."); }
+    } catch (error) { console.error("Erro logout:", error); showToast(`Erro logout: ${error.message}`, 'error'); currentUser = null; updateAuthUI(false); 
+    } finally { hideLoading(); }
+}
+
+// --- Carregar Fornecedores Globais ---
+async function carregarFornecedoresGlobais() {
+    if(!currentUser) return; 
+    try {
+        const response = await fetch(API_URL_FORNECEDORES, {credentials: 'include'});
+        if (!response.ok) { // Não lança erro aqui, apenas loga e limpa cache se falhar
+            console.error('Erro ao carregar fornecedores para datalist:', response.status);
+            todosFornecedoresCache = [];
+        } else {
+            todosFornecedoresCache = await response.json();
+        }
+        const popularDatalist = (datalistElem) => {
+            if (datalistElem) {
+                datalistElem.innerHTML = '';
+                todosFornecedoresCache.forEach(f => {
+                    const option = document.createElement('option');
+                    option.value = f.nome_fornecedor;
+                    option.dataset.id = f.id;
+                    option.dataset.numId = f.numero_identificacao_fornecedor || '';
+                    datalistElem.appendChild(option);
+                });
+            }
+        };
+        popularDatalist(datalistFornecedores); 
+        popularDatalist(datalistFornecedoresDiv);
+    } catch (error) { console.error("Erro em carregarFornecedoresGlobais:", error); todosFornecedoresCache = []; showToast(`Erro ao carregar fornecedores para seleção: ${error.message}`, 'error'); }
+}
+
+// --- Lógica do campo Fornecedor ---
+function setupFornecedorInput(inputNomeElem, inputHiddenIdElem, inputNumIdElem, datalistElem) {
+    if (inputNomeElem && inputHiddenIdElem && inputNumIdElem && datalistElem) {
+        inputNomeElem.addEventListener('input', function () {
+            const nomeDigitado = this.value.trim();
+            let fornecedorEncontrado = null;
+            const option = Array.from(datalistElem.options).find(opt => opt.value.toLowerCase() === nomeDigitado.toLowerCase());
+            if (option) { fornecedorEncontrado = { id: option.dataset.id, nome_fornecedor: option.value, numero_identificacao_fornecedor: option.dataset.numId }; }
+            if (!fornecedorEncontrado && nomeDigitado) { 
+                 fornecedorEncontrado = todosFornecedoresCache.find(f => f.nome_fornecedor.toLowerCase() === nomeDigitado.toLowerCase());
+            }
+            if (fornecedorEncontrado) {
+                inputHiddenIdElem.value = fornecedorEncontrado.id;
+                inputNumIdElem.value = fornecedorEncontrado.numero_identificacao_fornecedor || '';
+                inputNumIdElem.readOnly = true; 
+            } else {
+                inputHiddenIdElem.value = ''; 
+                inputNumIdElem.readOnly = false; 
+            }
+        });
+         inputNomeElem.addEventListener('blur', function() {
+            if (this.value.trim() === '' && inputHiddenIdElem.value === '') {
+                if(inputNumIdElem) inputNumIdElem.value = '';
+                inputNumIdElem.readOnly = false;
+            }
+        });
+    }
+}
+
+// --- MODAL E CRUD: FORNECEDORES ---
+function abrirModalNovoFornecedor() {
+    fornecedorAtualParaEdicaoId = null;
+    if (modalFornecedorTitulo) modalFornecedorTitulo.textContent = 'Novo Fornecedor';
+    if (formNovoEditarFornecedor) formNovoEditarFornecedor.reset();
+    if (inputFornecedorIdEdicao) inputFornecedorIdEdicao.value = '';
+    if (modalFornecedorErrorMessage) modalFornecedorErrorMessage.style.display = 'none';
+    if (modalNovoEditarFornecedor) modalNovoEditarFornecedor.style.display = 'block';
+}
+
+async function abrirModalEditarFornecedor(id) {
+    fornecedorAtualParaEdicaoId = id;
+    if (modalFornecedorErrorMessage) modalFornecedorErrorMessage.style.display = 'none';
+    showLoading();
+    try {
+        const response = await fetch(`${API_URL_FORNECEDORES}/${id}`, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: `Erro HTTP ${response.status}` }));
+            throw new Error(errorData.message || 'Erro ao buscar dados do fornecedor para edição.');
+        }
+        const fornecedor = await response.json();
+        if (modalFornecedorTitulo) modalFornecedorTitulo.textContent = 'Editar Fornecedor';
+        if (inputFornecedorIdEdicao) inputFornecedorIdEdicao.value = fornecedor.id;
+        if (inputFornecedorNomeForm) inputFornecedorNomeForm.value = fornecedor.nome_fornecedor || '';
+        if (inputFornecedorNumIdForm) inputFornecedorNumIdForm.value = fornecedor.numero_identificacao_fornecedor || '';
+        if (modalNovoEditarFornecedor) modalNovoEditarFornecedor.style.display = 'block';
+    } catch (e) {
+        hideLoading();
+        console.error("Erro ao abrir modal de edição de fornecedor:", e);
+        showToast(`Erro ao carregar dados do fornecedor: ${e.message}`, 'error');
+    }
+}
+
+function fecharModalNovoEditarFornecedor() {
+    if (modalNovoEditarFornecedor) modalNovoEditarFornecedor.style.display = 'none';
+    fornecedorAtualParaEdicaoId = null;
+}
+
+async function carregarErenderizarFornecedores(page = 1, sortConfig = currentSortForn, filters = currentFiltersForn) {
+    if (!corpoTabelaFornecedores || !currentUser) return;
+    showLoading('corpo-tabela-fornecedores');
+    currentSortForn = sortConfig; currentPageForn = page; currentFiltersForn = filters;
+
+    if (tabelaFornecedoresHeaders) {
+        tabelaFornecedoresHeaders.forEach(th => {
+            const arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = ''; 
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+        const activeTh = document.querySelector(`#tabela-fornecedores th[data-sortkey="${currentSortForn.key}"]`);
+        if (activeTh) {
+            const arrowSpan = activeTh.querySelector('.sort-arrow');
+            if (arrowSpan) arrowSpan.textContent = currentSortForn.direction === 'asc' ? ' ▲' : ' ▼';
+            activeTh.classList.add(currentSortForn.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    }
+
+    try {
+        const response = await fetch(API_URL_FORNECEDORES, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) throw new Error('Erro ao buscar fornecedores.');
+        let fornecedoresDaApi = await response.json();
+        todosFornecedoresCache = fornecedoresDaApi; 
+        
+        let itemsParaFiltrarEOrdenar = [...todosFornecedoresCache]; 
+        itemsParaFiltrarEOrdenar = aplicarFiltros(itemsParaFiltrarEOrdenar, currentFiltersForn, 'fornecedor');
+        itemsParaFiltrarEOrdenar = aplicarOrdenacao(itemsParaFiltrarEOrdenar, currentSortForn.key ? `${currentSortForn.key}_${currentSortForn.direction}` : currentSortForn);
+        
+        renderizarTabelaFornecedores(itemsParaFiltrarEOrdenar, currentPageForn);
+    } catch (e) {
+        hideLoading();
+        console.error("Erro ao carregar e renderizar fornecedores:", e);
+        if (corpoTabelaFornecedores) setListMessage(corpoTabelaFornecedores, `Erro ao carregar fornecedores: ${e.message}`);
+        showToast(`Erro ao carregar fornecedores: ${e.message}`, 'error');
+    }
+}
+
+function renderizarTabelaFornecedores(fornecedores, page = 1) {
+    if (!corpoTabelaFornecedores) return;
+    corpoTabelaFornecedores.innerHTML = '';
+    const start = (page - 1) * ITEMS_PER_PAGE_TABLE;
+    const end = start + ITEMS_PER_PAGE_TABLE;
+    const paginatedItems = fornecedores.slice(start, end);
+
+    if (paginatedItems.length === 0) {
+        const colunas = (currentUser && currentUser.role === 'master' ? 1 : 0) + 4;
+        corpoTabelaFornecedores.innerHTML = `<tr><td colspan="${colunas}"><p class="empty-state-message">Nenhum fornecedor encontrado ${Object.keys(currentFiltersForn).length > 0 ? 'para os filtros aplicados' : ''}.</p></td></tr>`;
+    } else {
+        paginatedItems.forEach(f => {
+            const tr = document.createElement('tr');
+            let ownerColumnHtml = '';
+            if (currentUser && currentUser.role === 'master') {
+                ownerColumnHtml = `<td data-label="Usuário">${f.owner_username || 'N/A'}</td>`;
+            }
+            tr.innerHTML = `
+                <td data-label="ID">${f.id}</td>
+                <td data-label="Nome"><a href="#" class="supplier-name-link" data-supplier-id="${f.id}" data-supplier-name="${f.nome_fornecedor}">${f.nome_fornecedor}</a></td>
+                <td data-label="N° ID">${f.numero_identificacao_fornecedor || 'N/A'}</td>
+                ${ownerColumnHtml}
+                <td class="actions-fornecedor">
+                    <button class="btn btn-sm btn-warning btn-editar-fornecedor" data-id="${f.id}" title="Editar Fornecedor">Editar</button>
+                    <button class="btn btn-sm btn-danger btn-excluir-fornecedor" data-id="${f.id}" title="Excluir Fornecedor">Excluir</button>
+                </td>`;
+            corpoTabelaFornecedores.appendChild(tr);
+        });
+    }
+    setupPagination(fornecedores.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-fornecedores', 
+        (newPage) => carregarErenderizarFornecedores(newPage, currentSortForn, currentFiltersForn)
+    );
+}
+
+if (formNovoEditarFornecedor) {
+    formNovoEditarFornecedor.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (modalFornecedorErrorMessage) modalFornecedorErrorMessage.style.display = 'none';
+        const fornecedorData = {
+            nome_fornecedor: inputFornecedorNomeForm.value,
+            numero_identificacao_fornecedor: inputFornecedorNumIdForm.value || null
+        };
+        let url = API_URL_FORNECEDORES;
+        let method = 'POST';
+        if (fornecedorAtualParaEdicaoId) {
+            url = `${API_URL_FORNECEDORES}/${fornecedorAtualParaEdicaoId}`;
+            method = 'PUT';
+        }
+        showLoading();
+        try {
+            const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fornecedorData), credentials: 'include' });
+            hideLoading();
+            const responseData = await response.json();
+            if (!response.ok) { throw new Error(responseData.message || `HTTP Error: ${response.status}`); }
+            fecharModalNovoEditarFornecedor();
+            const targetPage = method === 'POST' ? 1 : currentPageForn;
+            carregarErenderizarFornecedores(targetPage, currentSortForn, {}); // Reseta filtros ao criar/editar
+            carregarFornecedoresGlobais(); 
+            showToast(`Fornecedor ${fornecedorAtualParaEdicaoId ? 'atualizado' : 'criado'} com sucesso!`, 'success');
+        } catch (error) {
+            hideLoading();
+            console.error(`Falha ao ${fornecedorAtualParaEdicaoId ? 'atualizar' : 'criar'} fornecedor:`, error);
+            if (modalFornecedorErrorMessage) { modalFornecedorErrorMessage.textContent = `Erro: ${error.message}`; modalFornecedorErrorMessage.style.display = 'block'; }
+            showToast(`Erro: ${error.message}`, 'error');
+        }
+    });
+}
+
+if (corpoTabelaFornecedores) {
+    corpoTabelaFornecedores.addEventListener('click', async (event) => {
+        const targetButton = event.target.closest('button');
+        const targetLink = event.target.closest('a.supplier-name-link');
+
+        if (targetButton) {
+            event.preventDefault(); // Previne qualquer ação padrão do botão se ele estiver dentro de um form, etc.
+            const fornecedorId = targetButton.dataset.id;
+            if (!fornecedorId) return;
+
+            if (targetButton.classList.contains('btn-editar-fornecedor')) {
+                abrirModalEditarFornecedor(fornecedorId);
+            } else if (targetButton.classList.contains('btn-excluir-fornecedor')) {
+                if (confirm(`Tem certeza que deseja excluir o fornecedor ID ${fornecedorId}? Se houver chamados associados, a exclusão pode falhar.`)) {
+                    showLoading();
+                    try {
+                        const response = await fetch(`${API_URL_FORNECEDORES}/${fornecedorId}`, { method: 'DELETE', credentials: 'include' });
+                        hideLoading();
+                        const data = await response.json();
+                        if (!response.ok) { throw new Error(data.message || `Erro ao excluir fornecedor: ${response.status}`); }
+                        showToast('Fornecedor excluído com sucesso!', 'success');
+                        
+                        // Recalcula a página atual se necessário
+                        const totalItemsAposExclusao = todosFornecedoresCache.length - 1; // Assumindo que o cache será atualizado
+                        const totalPagesAposExclusao = Math.ceil(totalItemsAposExclusao / ITEMS_PER_PAGE_TABLE);
+                        let paginaAlvo = currentPageForn;
+                        if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
+                            paginaAlvo = totalPagesAposExclusao;
+                        } else if (totalItemsAposExclusao === 0) {
+                             paginaAlvo = 1;
+                        }
+                        carregarErenderizarFornecedores(paginaAlvo, currentSortForn, currentFiltersForn);
+                        carregarFornecedoresGlobais();
+                    } catch (error) {
+                        hideLoading();
+                        console.error("Erro ao excluir fornecedor:", error);
+                        showToast(`Falha ao excluir fornecedor: ${error.message}`, 'error');
+                    }
+                }
+            }
+        } else if (targetLink) {
+            event.preventDefault();
+            const supplierName = targetLink.dataset.supplierName;
+            
+            const pagTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
+            if (pagTabLink) {
+                pagTabLink.click();
+                setTimeout(() => { 
+                    const filtroFornPag = document.getElementById('filtro-fornecedor-chamado-pag');
+                    if (filtroFornPag) {
+                        filtroFornPag.value = supplierName;
+                        filtroFornPag.dispatchEvent(new Event('input', { bubbles: true })); 
+                    }
+                }, 150); // Aumentei o delay para dar mais tempo para a mudança de aba
+            }
+            showToast(`Filtrando chamados de pagamento por: ${supplierName}`, 'info');
+        }
+    });
+}
+
+// --- MODAL E CRUD: CHAMADO DE PAGAMENTO ---
+function abrirModalRegistrarChamadoPag() {
+    chamadoPagAtualParaEdicaoId = null;
+    if (modalChamadoPagTitulo) modalChamadoPagTitulo.textContent = 'Registrar Chamado de Pagamento';
+    if (formRegistrarEditarChamadoPag) formRegistrarEditarChamadoPag.reset();
+    if (inputChamadoPagIdEdicao) inputChamadoPagIdEdicao.value = '';
+    if (inputHiddenFornecedorIdChamadoPag) inputHiddenFornecedorIdChamadoPag.value = '';
+    if (inputNumIdFornecedorChamadoPag) {
+        inputNumIdFornecedorChamadoPag.value = '';
+        inputNumIdFornecedorChamadoPag.readOnly = false;
+    }
+    if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = ''; // Limpa o nome do fornecedor também
+    if (modalChamadoPagErrorMessage) modalChamadoPagErrorMessage.style.display = 'none';
+    
+    // Garante que a lista de fornecedores (datalist) esteja carregada/atualizada
+    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor, 
+    // então geralmente estará atualizado. Se quiser forçar:
+    // await carregarFornecedoresGlobais(); // Mas isso tornaria esta função async
+    
+    if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'block';
+}
+
+async function abrirModalEditarChamadoPag(chamadoId) {
+    chamadoPagAtualParaEdicaoId = chamadoId;
+    if (modalChamadoPagErrorMessage) modalChamadoPagErrorMessage.style.display = 'none';
+    showLoading();
+    try {
+        const response = await fetch(`${API_URL_PAGAMENTOS}/${chamadoId}`, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: "Erro ao buscar dados do chamado."}));
+            throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+        }
+        const chamado = await response.json();
+
+        if (modalChamadoPagTitulo) modalChamadoPagTitulo.textContent = 'Editar Registro de Chamado de Pagamento';
+        if (inputChamadoPagIdEdicao) inputChamadoPagIdEdicao.value = chamado.id;
+
+        await carregarFornecedoresGlobais(); // Garante que a lista está atualizada
+
+        if (inputNomeFornecedorChamadoPag) inputNomeFornecedorChamadoPag.value = chamado.nome_fornecedor || '';
+        if (inputHiddenFornecedorIdChamadoPag) inputHiddenFornecedorIdChamadoPag.value = chamado.fornecedor_id || '';
+        if (inputNumIdFornecedorChamadoPag) {
+            inputNumIdFornecedorChamadoPag.value = chamado.numero_identificacao_fornecedor || '';
+            inputNumIdFornecedorChamadoPag.readOnly = !!chamado.fornecedor_id; 
+        }
+        
+        const form = formRegistrarEditarChamadoPag;
+        if(form) {
+            // Usando os IDs corretos dos inputs conforme definido no HTML para o modal _pag
+            form.numero_chamado_origem_pag.value = chamado.numero_chamado_origem || '';
+            form.numero_fatura_pag.value = chamado.numero_fatura || '';
+            form.lancamento_pag.value = chamado.lancamento || '';
+            form.valor_pag.value = chamado.valor || '';
+            form.data_escrituracao_pag.value = formatDateForInput(chamado.data_escrituracao);
+            form.prazo_maximo_escrituracao_pag.value = formatDateForInput(chamado.prazo_maximo_escrituracao);
+            form.data_vencimento_pag.value = formatDateForInput(chamado.data_vencimento);
+            form.situacao_pag.value = chamado.situacao || 'Pendente';
+            form.observacoes_gerais_pag.value = chamado.observacoes_gerais || '';
+        }
+
+        if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'block';
+    } catch (e) {
+        hideLoading();
+        console.error("Erro ao abrir modal de edição (Pag):", e);
+        showToast(`Erro ao carregar dados para edição: ${e.message}`, 'error');
+    }
+}
+
+function fecharModalRegistrarEditarChamadoPag() {
+    if (modalRegistrarEditarChamadoPag) modalRegistrarEditarChamadoPag.style.display = 'none';
+    chamadoPagAtualParaEdicaoId = null;
+}
+
+if (formRegistrarEditarChamadoPag) {
+    formRegistrarEditarChamadoPag.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (modalChamadoPagErrorMessage) modalChamadoPagErrorMessage.style.display = 'none';
+        
+        const form = formRegistrarEditarChamadoPag; // Referência direta ao formulário
+        const chamadoData = {
+            numero_chamado_origem: form.numero_chamado_origem_pag.value,
+            numero_fatura: form.numero_fatura_pag.value,
+            fornecedor_id: inputHiddenFornecedorIdChamadoPag.value ? parseInt(inputHiddenFornecedorIdChamadoPag.value) : null,
+            nome_fornecedor_input: inputNomeFornecedorChamadoPag.value, 
+            numero_identificacao_fornecedor_input: inputNumIdFornecedorChamadoPag.value, 
+            lancamento: form.lancamento_pag.value,
+            valor: parseFloat(form.valor_pag.value),
+            data_escrituracao: form.data_escrituracao_pag.value || null,
+            prazo_maximo_escrituracao: form.prazo_maximo_escrituracao_pag.value || null,
+            data_vencimento: form.data_vencimento_pag.value,
+            situacao: form.situacao_pag.value,
+            observacoes_gerais: form.observacoes_gerais_pag.value
+        };
+
+        let url = API_URL_PAGAMENTOS;
+        let method = 'POST';
+        if (chamadoPagAtualParaEdicaoId) {
+            url = `${API_URL_PAGAMENTOS}/${chamadoPagAtualParaEdicaoId}`;
+            method = 'PUT';
+        }
+
+        showLoading();
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(chamadoData),
+                credentials: 'include'
+            });
+            hideLoading();
+            const responseData = await response.json(); 
+            if (!response.ok) {
+                throw new Error(responseData.message || `HTTP Error: ${response.status}`);
+            }
+            fecharModalRegistrarEditarChamadoPag();
+            const targetPage = method === 'POST' ? 1 : currentPagePag;
+            buscarChamadosPagamento(targetPage, currentSortPag, currentFiltersPag);
+            if (method === 'POST' && !chamadoData.fornecedor_id && chamadoData.nome_fornecedor_input) {
+                carregarFornecedoresGlobais();
+            }
+            showToast(`Chamado de Pagamento ${chamadoPagAtualParaEdicaoId ? 'atualizado' : 'registrado'} com sucesso!`, 'success');
+        } catch (error) {
+            hideLoading();
+            console.error(`Falha ao ${chamadoPagAtualParaEdicaoId ? 'atualizar' : 'registrar'} chamado (Pag):`, error);
+            if (modalChamadoPagErrorMessage) {
+                modalChamadoPagErrorMessage.textContent = `Erro: ${error.message}`;
+                modalChamadoPagErrorMessage.style.display = 'block';
+            }
+            showToast(`Erro: ${error.message}`, 'error');
+        }
+    });
+}
+
+// --- MODAL ACOMPANHAMENTOS CHAMADO PAGAMENTO ---
+function fecharModalAcompanhamentosChamadoPag() {
+    if (modalAcompanhamentosChamadoPag) modalAcompanhamentosChamadoPag.style.display = 'none';
+}
+
+async function abrirModalAcompanhamentosChamadoPag(chamadoId) {
+    if (!modalAcompanhamentosChamadoPag || !acompanhamentosChamadoPagInfo || !acompanhamentosChamadoPagLista || !acompanhamentosChamadoPagTitulo || !acompanhamentoChamadoPagIdInput) {
+        console.error("Elementos do modal de acompanhamento de pagamento não encontrados.");
+        return;
+    }
+    acompanhamentosChamadoPagInfo.innerHTML = '<p>Carregando informações do chamado...</p>';
+    acompanhamentosChamadoPagLista.innerHTML = '<p>Carregando acompanhamentos...</p>';
+    acompanhamentosChamadoPagTitulo.textContent = 'Acompanhamentos do Chamado';
+    showLoading();
+    try {
+        const response = await fetch(`${API_URL_PAGAMENTOS}/${chamadoId}`, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erro ao buscar detalhes do chamado: ${response.status} - ${errorText}`);
+        }
+        const chamado = await response.json();
+
+        acompanhamentosChamadoPagTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
+        acompanhamentosChamadoPagInfo.innerHTML = `
+            <p><strong>ID do Chamado:</strong> ${chamado.id}</p>
+            <p><strong>N° Chamado Externo:</strong> ${chamado.numero_chamado_origem || 'N/A'}</p>
+            <p><strong>N° Fatura:</strong> ${chamado.numero_fatura || 'N/A'}</p>
+            <p><strong>Fornecedor:</strong> ${chamado.nome_fornecedor || 'N/A'} (ID: ${chamado.fornecedor_id})</p>
+            <p><strong>N° ID Fornecedor:</strong> ${chamado.numero_identificacao_fornecedor || 'N/A'}</p>
+            <p><strong>Valor:</strong> R$ ${chamado.valor ? chamado.valor.toFixed(2).replace('.', ',') : '0,00'}</p>
+            <p><strong>Data de Vencimento:</strong> ${formatDateForDisplay(chamado.data_vencimento)}</p>
+            <p><strong>Situação:</strong> <span class="situacao ${formatarStatusParaClasse(chamado.situacao)}">${chamado.situacao || 'N/A'}</span></p>
+            <p><strong>Observações Gerais:</strong> ${chamado.observacoes_gerais || 'Nenhuma'}</p>
+        `;
+
+        acompanhamentoChamadoPagIdInput.value = chamado.id;
+        if (formNovoAcompanhamentoPag) formNovoAcompanhamentoPag.reset(); 
+        
+        acompanhamentosChamadoPagLista.innerHTML = '';
+        if (chamado.acompanhamentos && chamado.acompanhamentos.length > 0) {
+            chamado.acompanhamentos.forEach(h => {
+                const item = document.createElement('div');
+                item.classList.add('historico-item');
+                item.innerHTML = `
+                    <p>${h.descricao}</p>
+                    <p class="meta">Por: ${h.usuario || 'N/A'} em ${formatDateForDisplay(h.data_entrada)}</p>
+                `;
+                acompanhamentosChamadoPagLista.appendChild(item);
+            });
+        } else {
+            acompanhamentosChamadoPagLista.innerHTML = '<p class="empty-state-message">Nenhum acompanhamento registrado para este chamado.</p>';
+        }
+        modalAcompanhamentosChamadoPag.style.display = 'block';
+    } catch (error) {
+        hideLoading();
+        console.error("Erro ao abrir acompanhamentos (Pag):", error);
+        acompanhamentosChamadoPagInfo.innerHTML = `<p class="error-message">Não foi possível carregar os detalhes do chamado: ${error.message}</p>`;
+        showToast(`Erro ao carregar acompanhamentos: ${error.message}`, 'error');
+    }
+}
+
+if (formNovoAcompanhamentoPag) {
+    formNovoAcompanhamentoPag.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const chamadoId = acompanhamentoChamadoPagIdInput.value;
+        const descricaoInput = document.getElementById('acompanhamento-pag-descricao');
+        const usuarioInput = document.getElementById('acompanhamento-pag-usuario');
+        
+        const descricao = descricaoInput.value;
+        const usuario = usuarioInput.value;
+
+        if (!descricao.trim()) {
+            showToast("A descrição do acompanhamento não pode ser vazia.", "error");
+            return;
+        }
+        showLoading();
+        try {
+            const response = await fetch(`${API_URL_PAGAMENTOS}/${chamadoId}/acompanhamentos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ descricao: descricao, usuario: usuario || null }),
+                credentials: 'include'
+            });
+            hideLoading();
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.message || `Erro ao adicionar acompanhamento: ${response.status}`);
+            }
+            abrirModalAcompanhamentosChamadoPag(chamadoId); 
+            showToast('Acompanhamento adicionado com sucesso!', 'success');
+        } catch (error) {
+            hideLoading();
+            console.error("Erro ao adicionar acompanhamento (Pag):", error);
+            showToast(`Falha ao adicionar acompanhamento: ${error.message}`, 'error');
+        }
+    });
+}
+
+// --- BUSCAR E RENDERIZAR CHAMADOS DE PAGAMENTO ---
+async function buscarChamadosPagamento(page = 1, sortOption = currentSortPag, filters = currentFiltersPag) {
+    if (!listaChamadosPagamentoDiv || !currentUser) return;
+    showLoading('lista-chamados-pagamento');
+    currentSortPag = sortOption; currentPagePag = page; currentFiltersPag = filters;
+    try {
+        const response = await fetch(API_URL_PAGAMENTOS, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        todosChamadosPagCache = await response.json();
+        
+        let itemsToRender = aplicarFiltros(todosChamadosPagCache, currentFiltersPag, 'chamado');
+        itemsToRender = aplicarOrdenacao(itemsToRender, currentSortPag);
+        
+        renderizarListaChamados(itemsToRender, listaChamadosPagamentoDiv, 'pag', currentPagePag);
+    } catch (e) {
+        hideLoading();
+        console.error('Falha ao buscar chamados de pagamento:', e);
+        if (listaChamadosPagamentoDiv) setListMessage(listaChamadosPagamentoDiv, `Erro ao carregar chamados: ${e.message}`);
+        showToast(`Erro ao buscar chamados de pagamento: ${e.message}`, 'error');
+    }
+}
+
+// --- MODAL E CRUD: CHAMADO DIVERSO ---
+function abrirModalRegistrarChamadoDiv() {
+    chamadoDivAtualParaEdicaoId = null;
+    if (modalChamadoDivTitulo) modalChamadoDivTitulo.textContent = 'Registrar Chamado Diverso';
+    if (formRegistrarEditarChamadoDiv) formRegistrarEditarChamadoDiv.reset();
+    if (inputChamadoDivIdEdicao) inputChamadoDivIdEdicao.value = '';
+    if (inputHiddenFornecedorIdChamadoDiv) inputHiddenFornecedorIdChamadoDiv.value = '';
+    if (inputNumIdFornecedorChamadoDiv) {
+        inputNumIdFornecedorChamadoDiv.value = '';
+        inputNumIdFornecedorChamadoDiv.readOnly = false;
+    }
+    if(inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = '';
+    if (modalChamadoDivErrorMessage) modalChamadoDivErrorMessage.style.display = 'none';
+    carregarFornecedoresGlobais(); // Garante que o datalist está atualizado
+    if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
+}
+
+async function abrirModalEditarChamadoDiv(chamadoId) {
+    chamadoDivAtualParaEdicaoId = chamadoId;
+    if (modalChamadoDivErrorMessage) modalChamadoDivErrorMessage.style.display = 'none';
+    showLoading();
+    try {
+        const response = await fetch(`${API_URL_DIVERSOS}/${chamadoId}`, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) throw new Error('Erro ao buscar dados do chamado diverso para edição.');
+        const chamado = await response.json();
+
+        if (modalChamadoDivTitulo) modalChamadoDivTitulo.textContent = 'Editar Registro de Chamado Diverso';
+        if (inputChamadoDivIdEdicao) inputChamadoDivIdEdicao.value = chamado.id;
+
+        await carregarFornecedoresGlobais();
+
+        if (inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = chamado.nome_fornecedor || '';
+        if (inputHiddenFornecedorIdChamadoDiv) inputHiddenFornecedorIdChamadoDiv.value = chamado.fornecedor_id || '';
+        if (inputNumIdFornecedorChamadoDiv) {
+            inputNumIdFornecedorChamadoDiv.value = chamado.numero_identificacao_fornecedor || '';
+            inputNumIdFornecedorChamadoDiv.readOnly = !!chamado.fornecedor_id;
+        }
+        
+        const form = formRegistrarEditarChamadoDiv;
+        if(form){
+            form.numero_chamado_origem_div.value = chamado.numero_chamado_origem || '';
+            form.valor_div.value = chamado.valor !== null ? chamado.valor : ''; 
+            form.data_escrituracao_div.value = formatDateForInput(chamado.data_escrituracao);
+            form.situacao_div.value = chamado.situacao || 'Aberto';
+            form.observacoes_div.value = chamado.observacoes || '';
+        }
+
+        if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
+    } catch (e) {
+        hideLoading();
+        console.error("Erro ao abrir modal de edição (Div):", e);
+        showToast(`Erro ao carregar dados para edição: ${e.message}`, 'error');
+    }
+}
+
+function fecharModalRegistrarEditarChamadoDiv() {
+    if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'none';
+    chamadoDivAtualParaEdicaoId = null;
+}
+
+if (formRegistrarEditarChamadoDiv) {
+    formRegistrarEditarChamadoDiv.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (modalChamadoDivErrorMessage) modalChamadoDivErrorMessage.style.display = 'none';
+        
+        const form = formRegistrarEditarChamadoDiv;
+        const chamadoData = {
+            numero_chamado_origem: form.numero_chamado_origem_div.value,
+            fornecedor_id: inputHiddenFornecedorIdChamadoDiv.value ? parseInt(inputHiddenFornecedorIdChamadoDiv.value) : null,
+            nome_fornecedor_input: inputNomeFornecedorChamadoDiv.value,
+            numero_identificacao_fornecedor_input: inputNumIdFornecedorChamadoDiv.value,
+            valor: form.valor_div.value ? parseFloat(form.valor_div.value) : null,
+            data_escrituracao: form.data_escrituracao_div.value,
+            situacao: form.situacao_div.value,
+            observacoes: form.observacoes_div.value
+        };
+
+        let url = API_URL_DIVERSOS;
+        let method = 'POST';
+        if (chamadoDivAtualParaEdicaoId) {
+            url = `${API_URL_DIVERSOS}/${chamadoDivAtualParaEdicaoId}`;
+            method = 'PUT';
+        }
+
+        showLoading();
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(chamadoData),
+                credentials: 'include'
+            });
+            hideLoading();
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.message || `HTTP Error: ${response.status}`);
+            }
+            fecharModalRegistrarEditarChamadoDiv();
+            const targetPage = method === 'POST' ? 1 : currentPageDiv;
+            buscarChamadosDiversos(targetPage, currentSortDiv, currentFiltersDiv);
+            if (method === 'POST' && !chamadoData.fornecedor_id && chamadoData.nome_fornecedor_input) {
+                carregarFornecedoresGlobais();
+            }
+            showToast(`Chamado Diverso ${chamadoDivAtualParaEdicaoId ? 'atualizado' : 'registrado'} com sucesso!`, 'success');
+        } catch (error) {
+            hideLoading();
+            console.error(`Falha ao ${chamadoDivAtualParaEdicaoId ? 'atualizar' : 'registrar'} chamado (Div):`, error);
+            if (modalChamadoDivErrorMessage) {
+                modalChamadoDivErrorMessage.textContent = `Erro: ${error.message}`;
+                modalChamadoDivErrorMessage.style.display = 'block';
+            }
+            showToast(`Erro: ${error.message}`, 'error');
+        }
+    });
+}
+
+// --- MODAL ACOMPANHAMENTOS CHAMADO DIVERSO ---
+function fecharModalAcompanhamentosChamadoDiv() {
+    if (modalAcompanhamentosChamadoDiv) modalAcompanhamentosChamadoDiv.style.display = 'none';
+}
+
+async function abrirModalAcompanhamentosChamadoDiv(chamadoId) {
+    if (!modalAcompanhamentosChamadoDiv || !acompanhamentosChamadoDivInfo || !acompanhamentosChamadoDivLista || !acompanhamentosChamadoDivTitulo || !acompanhamentoChamadoDivIdInput) {
+         console.error("Elementos do modal de acompanhamento diverso não encontrados.");
+        return;
+    }
+    acompanhamentosChamadoDivInfo.innerHTML = '<p>Carregando informações do chamado...</p>';
+    acompanhamentosChamadoDivLista.innerHTML = '<p>Carregando acompanhamentos...</p>';
+    acompanhamentosChamadoDivTitulo.textContent = 'Acompanhamentos do Chamado';
+    showLoading();
+    try {
+        const response = await fetch(`${API_URL_DIVERSOS}/${chamadoId}`, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erro ao buscar detalhes do chamado diverso: ${response.status} - ${errorText}`);
+        }
+        const chamado = await response.json();
+
+        acompanhamentosChamadoDivTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
+        let fornecedorInfoHtml = '';
+        if (chamado.fornecedor_id) {
+            fornecedorInfoHtml = `<p><strong>Fornecedor:</strong> ${chamado.nome_fornecedor || 'N/A'} (ID: ${chamado.fornecedor_id})</p>
+                                  <p><strong>N° ID Fornecedor:</strong> ${chamado.numero_identificacao_fornecedor || 'N/A'}</p>`;
+        }
+        let valorInfoHtml = '';
+        if (chamado.valor !== null && chamado.valor !== undefined) {
+            valorInfoHtml = `<p><strong>Valor:</strong> R$ ${chamado.valor.toFixed(2)}</p>`;
+        }
+        acompanhamentosChamadoDivInfo.innerHTML = `
+            <p><strong>ID do Chamado:</strong> ${chamado.id}</p>
+            <p><strong>N° Chamado Externo:</strong> ${chamado.numero_chamado_origem || 'N/A'}</p>
+            ${fornecedorInfoHtml}
+            ${valorInfoHtml}
+            <p><strong>Data de Ocorrência/Criação:</strong> ${formatDateForDisplay(chamado.data_escrituracao)}</p>
+            <p><strong>Situação:</strong> <span class="situacao ${formatarStatusParaClasse(chamado.situacao)}">${chamado.situacao || 'N/A'}</span></p>
+            <p><strong>Observações Iniciais:</strong> ${chamado.observacoes || 'Nenhuma'}</p>
+        `;
+
+        acompanhamentoChamadoDivIdInput.value = chamado.id;
+        if(formNovoAcompanhamentoDiv) formNovoAcompanhamentoDiv.reset();
+        
+        acompanhamentosChamadoDivLista.innerHTML = '';
+        if (chamado.acompanhamentos && chamado.acompanhamentos.length > 0) {
+            chamado.acompanhamentos.forEach(h => {
+                const item = document.createElement('div');
+                item.classList.add('historico-item');
+                item.innerHTML = `
+                    <p>${h.descricao}</p>
+                    <p class="meta">Por: ${h.usuario || 'N/A'} em ${formatDateForDisplay(h.data_entrada)}</p>
+                `;
+                acompanhamentosChamadoDivLista.appendChild(item);
+            });
+        } else {
+            acompanhamentosChamadoDivLista.innerHTML = '<p class="empty-state-message">Nenhum acompanhamento registrado para este chamado.</p>';
+        }
+        modalAcompanhamentosChamadoDiv.style.display = 'block';
+    } catch (error) {
+        hideLoading();
+        console.error("Erro ao abrir acompanhamentos (Div):", error);
+        acompanhamentosChamadoDivInfo.innerHTML = `<p class="error-message">Não foi possível carregar os detalhes do chamado: ${error.message}</p>`;
+        showToast(`Erro ao carregar acompanhamentos: ${error.message}`, 'error');
+    }
+}
+
+if (formNovoAcompanhamentoDiv) {
+    formNovoAcompanhamentoDiv.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const chamadoId = acompanhamentoChamadoDivIdInput.value;
+        const descricaoInput = document.getElementById('acompanhamento-div-descricao');
+        const usuarioInput = document.getElementById('acompanhamento-div-usuario');
+        
+        const descricao = descricaoInput.value;
+        const usuario = usuarioInput.value;
+
+        if (!descricao.trim()) {
+            showToast("A descrição do acompanhamento não pode ser vazia.", "error");
+            return;
+        }
+        showLoading();
+        try {
+            const response = await fetch(`${API_URL_DIVERSOS}/${chamadoId}/acompanhamentos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ descricao: descricao, usuario: usuario || null }),
+                credentials: 'include'
+            });
+            hideLoading();
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.message || `Erro ao adicionar acompanhamento: ${response.status}`);
+            }
+            abrirModalAcompanhamentosChamadoDiv(chamadoId); // Recarrega o modal
+            showToast('Acompanhamento adicionado com sucesso!', 'success');
+        } catch (error) {
+            hideLoading();
+            console.error("Erro ao adicionar acompanhamento (Div):", error);
+            showToast(`Falha ao adicionar acompanhamento: ${error.message}`, 'error');
+        }
+    });
+}
+
+// --- BUSCAR E RENDERIZAR CHAMADOS DIVERSOS ---
+async function buscarChamadosDiversos(page = 1, sortOption = currentSortDiv, filters = currentFiltersDiv) {
+    if (!listaChamadosDiversosDiv || !currentUser) return;
+    showLoading('lista-chamados-diversos');
+    currentSortDiv = sortOption; currentPageDiv = page; currentFiltersDiv = filters;
+    try {
+        const response = await fetch(API_URL_DIVERSOS, { credentials: 'include' });
+        hideLoading();
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        todosChamadosDivCache = await response.json();
+        
+        let itemsToRender = aplicarFiltros(todosChamadosDivCache, currentFiltersDiv, 'chamado');
+        itemsToRender = aplicarOrdenacao(itemsToRender, currentSortDiv);
+        
+        renderizarListaChamados(itemsToRender, listaChamadosDiversosDiv, 'div', currentPageDiv);
+    } catch (e) {
+        hideLoading();
+        console.error('Falha ao buscar chamados diversos:', e);
+        if (listaChamadosDiversosDiv) setListMessage(listaChamadosDiversosDiv, `Erro ao carregar chamados: ${e.message}`);
+        showToast(`Erro ao buscar chamados diversos: ${e.message}`, 'error');
+    }
+}
+
+// --- RENDERIZADOR GENÉRICO DE LISTA DE CHAMADOS (CARDS) ---
+function renderizarListaChamados(chamados, containerElement, tipoChamadoSlug, currentPage = 1) {
+    if (!containerElement) {
+        console.error("Elemento container não encontrado para renderizar lista de chamados:", containerElement);
+        return;
+    }
+    containerElement.innerHTML = ''; // Limpa conteúdo anterior
+    const itemsPerPage = ITEMS_PER_PAGE_CARDS;
+
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginatedItems = chamados.slice(start, end);
+
+    if (paginatedItems.length === 0) {
+        let tipoFiltro = tipoChamadoSlug === 'pag' ? currentFiltersPag : currentFiltersDiv;
+        let temFiltroAtivo = Object.keys(tipoFiltro).length > 0;
+        setListMessage(containerElement, `Nenhum chamado ${tipoChamadoSlug === 'pag' ? 'de pagamento' : 'diverso'} encontrado ${temFiltroAtivo ? 'para os filtros aplicados' : ''}.`);
+    } else {
+        paginatedItems.forEach(chamado => {
+            const card = document.createElement('div');
+            card.classList.add('chamado-card');
+
+            let fornecedorHTML = '';
+            if (chamado.nome_fornecedor || chamado.fornecedor_id) {
+                fornecedorHTML = `<p><strong>Fornecedor:</strong> <a href="#" class="supplier-name-link" data-supplier-id="${chamado.fornecedor_id}" data-supplier-name="${chamado.nome_fornecedor || ''}">${chamado.nome_fornecedor || 'N/A'}</a> (ID: ${chamado.fornecedor_id || 'N/A'})</p>`;
+            } else if (tipoChamadoSlug === 'pag') { 
+                 fornecedorHTML = `<p><strong>Fornecedor:</strong> N/A</p>`;
+            }
+
+            let valorHTML = '';
+            if (chamado.valor !== null && chamado.valor !== undefined) {
+                 valorHTML = `<p><strong>Valor:</strong> R$ ${chamado.valor ? chamado.valor.toFixed(2).replace('.', ',') : '0,00'}</p>`;
+            }
+
+            let extraFieldsHTML = '';
+            if (tipoChamadoSlug === 'pag') {
+                extraFieldsHTML = `
+                    <p><strong>Fatura:</strong> ${chamado.numero_fatura || 'N/A'}</p>
+                    <p><strong>Vencimento:</strong> ${formatDateForDisplay(chamado.data_vencimento)}</p>`;
+            } else { // 'div'
+                extraFieldsHTML = `
+                    <p><strong>Data Ocorr.:</strong> ${formatDateForDisplay(chamado.data_escrituracao)}</p>
+                    <p><strong>Observações:</strong> ${(chamado.observacoes || 'N/A').substring(0, 50)}${(chamado.observacoes && chamado.observacoes.length > 50) ? '...' : ''}</p>`;
+            }
+            
+            let ownerHTML = '';
+            if (currentUser && currentUser.role === 'master' && chamado.owner_username) {
+                ownerHTML = `<p><small><strong>Usuário:</strong> ${chamado.owner_username}</small></p>`;
+            }
+
+            card.innerHTML = `
+                <h3>${chamado.numero_chamado_origem || 'N/A'}</h3>
+                ${fornecedorHTML}
+                ${valorHTML}
+                ${extraFieldsHTML}
+                <p><strong>Situação:</strong> <span class="situacao ${formatarStatusParaClasse(chamado.situacao)}">${chamado.situacao || 'N/A'}</span></p>
+                ${ownerHTML}
+                <div class="chamado-actions">
+                    <button class="btn btn-sm btn-info btn-acompanhamentos" data-id="${chamado.id}" data-tipo="${tipoChamadoSlug}" title="Ver/Adicionar Acompanhamentos">Acompanhar</button>
+                    <button class="btn btn-sm btn-warning btn-editar" data-id="${chamado.id}" data-tipo="${tipoChamadoSlug}" title="Editar Chamado">Editar</button>
+                    <button class="btn btn-sm btn-danger btn-excluir" data-id="${chamado.id}" data-tipo="${tipoChamadoSlug}" title="Excluir Chamado">Excluir</button>
+                </div>
+            `;
+            containerElement.appendChild(card);
+        });
+    }
+
+    const paginationContainerId = tipoChamadoSlug === 'pag' ? 'pagination-chamados-pag' : 'pagination-chamados-div';
+    
+    // A função de callback para paginação agora precisa passar os filtros e ordenação atuais
+    const paginationCallback = (newPage) => {
+        if (tipoChamadoSlug === 'pag') {
+            buscarChamadosPagamento(newPage, currentSortPag, currentFiltersPag);
+        } else { // 'div'
+            buscarChamadosDiversos(newPage, currentSortDiv, currentFiltersDiv);
+        }
+    };
+    setupPagination(chamados.length, itemsPerPage, currentPage, paginationContainerId, paginationCallback);
+}
+
+
+// --- DELEGAÇÃO DE EVENTOS PARA CARDS (GENÉRICO) ---
+document.querySelectorAll('.chamados-grid').forEach(grid => {
+    grid.addEventListener('click', async (event) => {
+        const targetButton = event.target.closest('button');
+        const targetLink = event.target.closest('a.supplier-name-link'); // Para clique no nome do fornecedor dentro do card
+
+        if (targetButton) {
+            const chamadoId = targetButton.dataset.id;
+            const tipoChamado = targetButton.dataset.tipo; 
+            if (!chamadoId || !tipoChamado) return;
+
+            const API_URL_CURRENT = tipoChamado === 'pag' ? API_URL_PAGAMENTOS : API_URL_DIVERSOS;
+            const fnAbrirModalEditar = tipoChamado === 'pag' ? abrirModalEditarChamadoPag : abrirModalEditarChamadoDiv;
+            const fnBuscarChamados = tipoChamado === 'pag' ? buscarChamadosPagamento : buscarChamadosDiversos;
+            const fnAbrirModalAcompanhamentos = tipoChamado === 'pag' ? abrirModalAcompanhamentosChamadoPag : abrirModalAcompanhamentosChamadoDiv;
+            const curPage = tipoChamado === 'pag' ? currentPagePag : currentPageDiv;
+            const curSort = tipoChamado === 'pag' ? currentSortPag : currentSortDiv;
+            const curFilters = tipoChamado === 'pag' ? currentFiltersPag : currentFiltersDiv;
+
+            if (targetButton.classList.contains('btn-acompanhamentos')) {
+                fnAbrirModalAcompanhamentos(chamadoId);
+            } else if (targetButton.classList.contains('btn-editar')) {
+                fnAbrirModalEditar(chamadoId);
+            } else if (targetButton.classList.contains('btn-excluir')) {
+                if (confirm(`Tem certeza que deseja excluir o chamado ID ${chamadoId}? Esta ação não pode ser desfeita.`)) {
+                    showLoading();
+                    try {
+                        const response = await fetch(`${API_URL_CURRENT}/${chamadoId}`, { method: 'DELETE', credentials: 'include' });
+                        hideLoading();
+                        const data = await response.json();
+                        if (!response.ok) { throw new Error(data.message || `Erro ao excluir: ${response.status}`); }
+                        showToast('Chamado excluído com sucesso!', 'success');
+                        fnBuscarChamados(curPage, curSort, curFilters); 
+                    } catch (error) {
+                        hideLoading();
+                        console.error("Erro ao excluir chamado:", error);
+                        showToast(`Falha ao excluir chamado: ${error.message}`, 'error');
+                    }
+                }
+            }
+        } else if (targetLink && targetLink.classList.contains('supplier-name-link')) {
+             event.preventDefault();
+            const supplierName = targetLink.dataset.supplierName;
+            const pagTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
+            if (pagTabLink) {
+                pagTabLink.click();
+                setTimeout(() => { 
+                    const filtroFornPag = document.getElementById('filtro-fornecedor-chamado-pag');
+                    if (filtroFornPag) {
+                        filtroFornPag.value = supplierName;
+                        filtroFornPag.dispatchEvent(new Event('input', { bubbles: true })); 
+                    }
+                }, 150);
+            }
+            showToast(`Filtrando chamados de pagamento por: ${supplierName}`, 'info');
+        }
+    });
+});
+
+
+// --- LÓGICA DE FILTROS ---
+function setupFilterListeners() {
+    document.querySelectorAll('.filter-input').forEach(input => {
+        input.addEventListener('input', () => { 
+            const listId = input.dataset.list;
+            const filters = collectFiltersForList(listId);
+            if (listId === 'lista-chamados-pagamento') { currentPagePag = 1; buscarChamadosPagamento(1, currentSortPag, filters); }
+            else if (listId === 'lista-chamados-diversos') { currentPageDiv = 1; buscarChamadosDiversos(1, currentSortDiv, filters); }
+            else if (listId === 'corpo-tabela-fornecedores') { currentPageForn = 1; carregarErenderizarFornecedores(1, currentSortForn, filters); }
+        });
+    });
+}
+
+function collectFiltersForList(listId) {
+    const filters = {};
+    document.querySelectorAll(`.filter-input[data-list="${listId}"]`).forEach(filterElem => {
+        if (filterElem.value && filterElem.value.trim() !== '') { 
+            filters[filterElem.dataset.fieldkey] = filterElem.value.toLowerCase().trim();
+        }
+    });
+    if (listId === 'lista-chamados-pagamento') currentFiltersPag = filters;
+    else if (listId === 'lista-chamados-diversos') currentFiltersDiv = filters;
+    else if (listId === 'corpo-tabela-fornecedores') currentFiltersForn = filters;
+    return filters;
+}
+
+function aplicarFiltros(items, filters, itemType) { 
+    if (!items) return [];
+    if (Object.keys(filters).length === 0) return items;
+    return items.filter(item => {
+        for (const fieldKey in filters) {
+            const filterVal = filters[fieldKey];
+            let itemVal = '';
+
+            if (fieldKey === 'nome_fornecedor' && item.nome_fornecedor) { 
+                itemVal = String(item.nome_fornecedor).toLowerCase().trim();
+            } else if (fieldKey === 'numero_identificacao_fornecedor' && item.numero_identificacao_fornecedor) {
+                 itemVal = String(item.numero_identificacao_fornecedor).toLowerCase().trim();
+            } else if (fieldKey === 'owner_username' && item.owner_username) {
+                itemVal = String(item.owner_username).toLowerCase().trim();
+            } else if (item[fieldKey]) { 
+                itemVal = String(item[fieldKey]).toLowerCase().trim();
+            }
+            
+            if (!itemVal.includes(filterVal)) return false;
+        }
+        return true;
+    });
+}
+
+// --- LÓGICA DE ORDENAÇÃO ---
+function aplicarOrdenacao(items, sortOption) {
+    if (!sortOption || !items || items.length === 0) return items;
+    
+    let key, direction;
+    if (typeof sortOption === 'object' && sortOption.key && sortOption.direction) { 
+        key = sortOption.key;
+        direction = sortOption.direction;
+    } else if (typeof sortOption === 'string' && sortOption.includes('_')) { 
+        [key, direction] = sortOption.split('_');
+    } else {
+        return items; 
+    }
+    
+    const isAsc = direction === 'asc';
+
+    return [...items].sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+
+        if(key === 'nome_fornecedor' && a.fornecedor_obj) valA = a.fornecedor_obj.nome_fornecedor;
+        if(key === 'nome_fornecedor' && b.fornecedor_obj) valB = b.fornecedor_obj.nome_fornecedor;
+        if(key === 'owner_username' && a.owner) valA = a.owner.username; // Supondo que 'owner' é o backref no modelo de dados
+        if(key === 'owner_username' && b.owner) valB = b.owner.username;
+
+        if (key.startsWith('data_') && valA && valB) {
+            valA = new Date(valA);
+            valB = new Date(valB);
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+            // Já são números
+        } else { 
+            valA = String(valA === null || valA === undefined ? '' : valA).toLowerCase();
+            valB = String(valB === null || valB === undefined ? '' : valB).toLowerCase();
+        }
+
+        if (valA < valB) return isAsc ? -1 : 1;
+        if (valA > valB) return isAsc ? 1 : -1;
+        return 0;
+    });
+}
+
+function setupSortListeners() {
+    if (sortChamadoPagSelect) sortChamadoPagSelect.addEventListener('change', (e) => buscarChamadosPagamento(1, e.target.value, currentFiltersPag));
+    if (sortChamadoDivSelect) sortChamadoDivSelect.addEventListener('change', (e) => buscarChamadosDiversos(1, e.target.value, currentFiltersDiv));
+    if (tabelaFornecedoresHeaders) {
+        tabelaFornecedoresHeaders.forEach(th => {
+            th.addEventListener('click', () => {
+                const sortKey = th.dataset.sortkey; if (!sortKey) return;
+                const newDirection = (currentSortForn.key === sortKey && currentSortForn.direction === 'asc') ? 'desc' : 'asc';
+                currentSortForn = { key: sortKey, direction: newDirection };
+                tabelaFornecedoresHeaders.forEach(h => { const arrow = h.querySelector('.sort-arrow'); if (arrow) arrow.textContent = ''; h.classList.remove('sort-asc', 'sort-desc');});
+                const arrowSpan = th.querySelector('.sort-arrow'); if (arrowSpan) arrowSpan.textContent = newDirection === 'asc' ? ' ▲' : ' ▼';
+                th.classList.add(newDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                carregarErenderizarFornecedores(1, currentSortForn, currentFiltersForn);
+            });
+        });
+    }
+}
+
+// --- LÓGICA DE PAGINAÇÃO ---
+function setupPagination(totalItems, itemsPerPage, currentPage, paginationContainerId, fetchFunctionWithPage) {
+    const paginationContainer = document.getElementById(paginationContainerId);
+    if (!paginationContainer) return;
+    paginationContainer.innerHTML = '';
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    if (totalPages <= 1) return;
+
+    const createPageButton = (pageNumber, text, isDisabled = false, isActive = false) => {
+        const button = document.createElement('button');
+        button.textContent = text || pageNumber;
+        button.className = 'btn btn-sm';
+        button.classList.add(isActive ? 'btn-primary' : 'btn-secondary');
+        button.disabled = isDisabled;
+        button.addEventListener('click', () => fetchFunctionWithPage(pageNumber));
+        return button;
+    };
+
+    paginationContainer.appendChild(createPageButton(currentPage - 1, 'Anterior', currentPage === 1));
+
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+    if (currentPage <= 3) endPage = Math.min(5, totalPages);
+    if (currentPage > totalPages - 3) startPage = Math.max(1, totalPages - 4);
+    
+    if (startPage > 1) {
+        paginationContainer.appendChild(createPageButton(1, '1'));
+        if (startPage > 2) paginationContainer.appendChild(document.createTextNode('...'));
+    }
+    for (let i = startPage; i <= endPage; i++) {
+        paginationContainer.appendChild(createPageButton(i, i, false, i === currentPage));
+    }
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) paginationContainer.appendChild(document.createTextNode('...'));
+        paginationContainer.appendChild(createPageButton(totalPages, totalPages));
+    }
+    paginationContainer.appendChild(createPageButton(currentPage + 1, 'Próxima', currentPage === totalPages));
+}
+
+
+// --- NAVEGAÇÃO POR ABAS ---
+if (navLinks && contentSections) {
+    navLinks.forEach(link => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!currentUser && link.dataset.target !== 'admin-users-section' && link.dataset.target !== 'fornecedores-section' && link.dataset.target !== 'chamados-diversos-section' && link.dataset.target !== 'chamados-pagamento-section'  ) { 
+                // Se não estiver logado, permite apenas se não for uma aba protegida (nenhuma é, exceto admin)
+                // Mas se o conteúdo principal está escondido, essa checagem não faz muito. O importante é o checkAuthStatus.
+            }
+            if (!currentUser && (link.dataset.target === 'chamados-pagamento-section' || link.dataset.target === 'chamados-diversos-section' || link.dataset.target === 'fornecedores-section' || link.dataset.target === 'admin-users-section')) {
+                 showToast("Por favor, faça login para acessar esta área.", "error"); return;
+            }
+
+
+            const targetId = link.getAttribute('data-target');
+            contentSections.forEach(section => section.style.display = 'none');
+            navLinks.forEach(navLink => navLink.classList.remove('active'));
+
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+                link.classList.add('active');
+
+                currentPagePag = 1; currentPageDiv = 1; currentPageForn = 1; currentPageAdminUsers = 1;
+                currentFiltersPag = {}; currentFiltersDiv = {}; currentFiltersForn = {}; currentFiltersAdminUsers = {};
+                document.querySelectorAll('.filter-input').forEach(fi => fi.value = ''); 
+                if(sortChamadoPagSelect) sortChamadoPagSelect.value = 'data_vencimento_desc'; currentSortPag = 'data_vencimento_desc';
+                if(sortChamadoDivSelect) sortChamadoDivSelect.value = 'data_escrituracao_desc'; currentSortDiv = 'data_escrituracao_desc';
+                currentSortForn = {key:'nome_fornecedor', direction:'asc'};
+                currentSortAdminUsers = {key:'username', direction:'asc'};
+                if(tabelaFornecedoresHeaders) tabelaFornecedoresHeaders.forEach(h => {const arrow = h.querySelector('.sort-arrow'); if(arrow) arrow.textContent = ''; h.classList.remove('sort-asc','sort-desc');});
+                // Adicionar reset similar para tabela de admin users se ela tiver ordenação por header
+
+
+                if (targetId === 'chamados-pagamento-section') buscarChamadosPagamento();
+                else if (targetId === 'fornecedores-section') carregarErenderizarFornecedores();
+                else if (targetId === 'chamados-diversos-section') buscarChamadosDiversos();
+                else if (targetId === 'admin-users-section' && currentUser && currentUser.role === 'master') carregarErenderizarAdminUsers();
+            }
+        });
+    });
+}
+
+// --- EVENT LISTENERS GLOBAIS E INICIALIZAÇÃO ---
+function setupGlobalEventListeners() {
+    const allModals = document.querySelectorAll('.modal');
+    allModals.forEach(modal => {
+        const closeButton = modal.querySelector('.close-button');
+        if (closeButton) closeButton.addEventListener('click', () => modal.style.display = 'none');
+    });
+    window.addEventListener('click', function (event) { allModals.forEach(modal => { if (event.target == modal) modal.style.display = 'none'; }); });
+    window.addEventListener('keydown', function (event) { if (event.key === "Escape") { allModals.forEach(modal => modal.style.display = 'none'); } });
+
+    if(btnCancelLoginModal && modalLogin) btnCancelLoginModal.addEventListener('click', () => modalLogin.style.display = 'none');
+    if(btnCancelRegisterModal && modalRegister) btnCancelRegisterModal.addEventListener('click', () => modalRegister.style.display = 'none');
+    if(formLogin) formLogin.addEventListener('submit', handleLogin);
+    if(formRegister) formRegister.addEventListener('submit', handleRegister);
+
+    if (btnAbrirModalRegistrarChamadoPag) btnAbrirModalRegistrarChamadoPag.addEventListener('click', abrirModalRegistrarChamadoPag);
+    if (btnCloseModalRegistrarEditarChamadoPag) btnCloseModalRegistrarEditarChamadoPag.addEventListener('click', fecharModalRegistrarEditarChamadoPag);
+    if (btnCancelarModalChamadoPag) btnCancelarModalChamadoPag.addEventListener('click', fecharModalRegistrarEditarChamadoPag);
+    if (btnCloseModalAcompanhamentosChamadoPag) btnCloseModalAcompanhamentosChamadoPag.addEventListener('click', fecharModalAcompanhamentosChamadoPag);
+    if (btnAtualizarChamadosPag) btnAtualizarChamadosPag.addEventListener('click', () => buscarChamadosPagamento(currentPagePag, currentSortPag, currentFiltersPag));
+
+    if (btnAbrirModalRegistrarChamadoDiv) btnAbrirModalRegistrarChamadoDiv.addEventListener('click', abrirModalRegistrarChamadoDiv);
+    if (btnCloseModalRegistrarEditarChamadoDiv) btnCloseModalRegistrarEditarChamadoDiv.addEventListener('click', fecharModalRegistrarEditarChamadoDiv);
+    if (btnCancelarModalChamadoDiv) btnCancelarModalChamadoDiv.addEventListener('click', fecharModalRegistrarEditarChamadoDiv);
+    if (btnCloseModalAcompanhamentosChamadoDiv) btnCloseModalAcompanhamentosChamadoDiv.addEventListener('click', fecharModalAcompanhamentosChamadoDiv);
+    if (btnAtualizarChamadosDiv) btnAtualizarChamadosDiv.addEventListener('click', () => buscarChamadosDiversos(currentPageDiv, currentSortDiv, currentFiltersDiv));
+    
+    if (btnAbrirModalNovoFornecedor) btnAbrirModalNovoFornecedor.addEventListener('click', abrirModalNovoFornecedor);
+    if (btnCloseModalFornecedor) btnCloseModalFornecedor.addEventListener('click', fecharModalNovoEditarFornecedor);
+    if (btnCancelarModalFornecedor) btnCancelarModalFornecedor.addEventListener('click', fecharModalNovoEditarFornecedor);
+
+    if(formEditUserRole) formEditUserRole.addEventListener('submit', handleEditUserRoleSubmit);
+    if(btnCloseModalEditUserRole) btnCloseModalEditUserRole.addEventListener('click', () => modalEditUserRole.style.display = 'none');
+    if(btnCancelEditUserRole) btnCancelEditUserRole.addEventListener('click', () => modalEditUserRole.style.display = 'none');
+
+}
+
+function init() {
+    if (currentYearSpan) currentYearSpan.textContent = new Date().getFullYear();
+    checkAuthStatus(); 
+    setupGlobalEventListeners(); 
+    // setupFilterListeners e setupSortListeners são chamados DENTRO de updateAuthUI quando o usuário está logado.
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+// --- ADMIN USER MANAGEMENT --- (NOVO)
+async function carregarErenderizarAdminUsers(page = 1, sortConfig = currentSortAdminUsers) {
+    if (!corpoTabelaAdminUsers || !currentUser || currentUser.role !== 'master') return;
+    showLoading('corpo-tabela-admin-users');
+    currentPageAdminUsers = page; currentSortAdminUsers = sortConfig;
+    // TODO: Adicionar filtros para admin users se necessário e passá-los aqui
+
+    // Resetar setas de ordenação (se for por header de tabela)
+    // ...
+
+    try {
+        const response = await fetch(API_URL_ADMIN_USERS, {credentials: 'include'});
+        hideLoading();
+        if (!response.ok) throw new Error('Erro ao buscar usuários.');
+        todosUsuariosCache = await response.json();
+        
+        let itemsToRender = aplicarFiltros(todosUsuariosCache, {} /* filtros admin users */, 'user'); // Passar filtros se houver
+        itemsToRender = aplicarOrdenacao(itemsToRender, currentSortAdminUsers.key ? `${currentSortAdminUsers.key}_${currentSortAdminUsers.direction}` : currentSortAdminUsers);
+        
+        renderizarTabelaAdminUsers(itemsToRender, currentPageAdminUsers);
+    } catch(e) {
+        hideLoading();
+        console.error("Erro ao carregar usuários admin:", e);
+        setListMessage(corpoTabelaAdminUsers, `Erro: ${e.message}`);
+        showToast(`Erro ao carregar usuários: ${e.message}`, 'error');
+    }
+}
+
+function renderizarTabelaAdminUsers(users, page = 1) {
+    if (!corpoTabelaAdminUsers) return;
+    corpoTabelaAdminUsers.innerHTML = '';
+    const start = (page - 1) * ITEMS_PER_PAGE_TABLE;
+    const end = start + ITEMS_PER_PAGE_TABLE;
+    const paginatedItems = users.slice(start, end);
+
+    if (paginatedItems.length === 0) {
+        corpoTabelaAdminUsers.innerHTML = `<tr><td colspan="5"><p class="empty-state-message">Nenhum usuário encontrado.</p></td></tr>`;
+    } else {
+        paginatedItems.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td data-label="ID">${user.id}</td>
+                <td data-label="Username">${user.username}</td>
+                <td data-label="Email">${user.email}</td>
+                <td data-label="Papel">${user.role}</td>
+                <td class="actions-user">
+                    ${user.id !== currentUser.id ? // Master não pode editar/deletar a si mesmo por aqui
+                    `<button class="btn btn-sm btn-warning btn-edit-user-role" data-id="${user.id}" data-username="${user.username}" data-role="${user.role}" title="Editar Papel">Editar Papel</button>
+                     <button class="btn btn-sm btn-danger btn-delete-user" data-id="${user.id}" data-username="${user.username}" title="Deletar Usuário">Deletar</button>`
+                    : 'N/A'}
+                </td>
+            `;
+            corpoTabelaAdminUsers.appendChild(tr);
+        });
+    }
+    // setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers)); // Adicionar div de paginação no HTML se quiser
+}
+
+if (corpoTabelaAdminUsers) {
+    corpoTabelaAdminUsers.addEventListener('click', async (event) => {
+        const targetButton = event.target.closest('button');
+        if (!targetButton) return;
+        const userId = targetButton.dataset.id;
+        const username = targetButton.dataset.username;
+
+        if (targetButton.classList.contains('btn-edit-user-role')) {
+            if (editUserIdInput) editUserIdInput.value = userId;
+            if (editUserUsernameDisplay) editUserUsernameDisplay.textContent = username;
+            if (editUserRoleSelect) editUserRoleSelect.value = targetButton.dataset.role;
+            if (modalEditUserRoleErrorMessage) modalEditUserRoleErrorMessage.style.display = 'none';
+            if (modalEditUserRole) modalEditUserRole.style.display = 'block';
+        } else if (targetButton.classList.contains('btn-delete-user')) {
+            if (confirm(`Tem certeza que deseja deletar o usuário ${username} (ID: ${userId})? Todos os seus dados associados (chamados, fornecedores) serão perdidos.`)) {
+                showLoading();
+                try {
+                    const response = await fetch(`${API_URL_ADMIN_USERS}/${userId}`, { method: 'DELETE', credentials: 'include' });
+                    hideLoading();
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || `Erro ao deletar usuário: ${response.status}`);
+                    showToast(data.message, 'success');
+                    carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers); // Recarrega lista
+                } catch (error) {
+                    hideLoading();
+                    console.error("Erro ao deletar usuário:", error);
+                    showToast(`Falha ao deletar usuário: ${error.message}`, 'error');
+                }
+            }
+        }
+    });
+}
+
+if (formEditUserRole) {
+    formEditUserRole.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const userId = editUserIdInput.value;
+        const newRole = editUserRoleSelect.value;
+        if (!userId || !newRole) {
+            showToast("Informações do usuário ou papel inválidas.", "error");
+            return;
+        }
+        showLoading();
+        try {
+            const response = await fetch(`${API_URL_ADMIN_USERS}/${userId}/role`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: newRole }),
+                credentials: 'include'
+            });
+            hideLoading();
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || `Erro ao alterar papel: ${response.status}`);
+            showToast(data.message, 'success');
+            if(modalEditUserRole) modalEditUserRole.style.display = 'none';
+            carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers);
+        } catch (error) {
+            hideLoading();
+            console.error("Erro ao alterar papel:", error);
+            if(editUserRoleErrorMessage) {editUserRoleErrorMessage.textContent = error.message; editUserRoleErrorMessage.style.display = 'block';}
+            showToast(`Falha ao alterar papel: ${error.message}`, 'error');
+        }
+    });
+}
