@@ -22,7 +22,7 @@ CORS(app,
          "http://localhost:5500", 
          "http://127.0.0.1:5501", # Outra porta comum do Live Server
          "http://localhost:5501",
-         "https://painel-chamados-qv8b-igtpzm0np-anderson-limas-projects-a7758c6a.vercel.app",
+         "https://painel-chamados-fg8dazdev-anderson-limas-projects-a7758c6a.vercel.app/",
          "https://painel-chamados.vercel.app" # Sua URL Vercel (Exemplo)
          # Adicione outras origens se necessário, como a URL real da sua Vercel quando souber
      ]
