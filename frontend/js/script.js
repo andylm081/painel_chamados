@@ -1423,69 +1423,54 @@ function init() {
 document.addEventListener('DOMContentLoaded', init);
 
 // --- ADMIN USER MANAGEMENT --- (NOVO)
-async function handleEditUserRoleSubmit(event) {
-    event.preventDefault();
-    if (!editUserIdInput || !editUserRoleSelect || !editUserRoleErrorMessage) {
-        console.error("Elementos do modal de edição de papel não encontrados.");
+async function carregarErenderizarAdminUsers(page = 1, sortConfig = currentSortAdminUsers) { // ADICIONADO ASYNC AQUI
+    if (!corpoTabelaAdminUsers || !currentUser || currentUser.role !== 'master') {
+        // Se a aba for acessada por um não-master (improvável se a UI estiver correta), limpa a tabela.
+        if(corpoTabelaAdminUsers) corpoTabelaAdminUsers.innerHTML = '<tr><td colspan="5"><p class="empty-state-message">Acesso não autorizado.</p></td></tr>';
         return;
     }
-
-    const userId = editUserIdInput.value;
-    const newRole = editUserRoleSelect.value;
-
-    if (!userId || !newRole) {
-        showToast("Informações do usuário ou papel inválidas.", "error");
-        return;
-    }
-
-    showLoading();
-    try {
-        const response = await fetch(`<span class="math-inline">\{API\_URL\_ADMIN\_USERS\}/</span>{userId}/role`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: newRole }),
-            credentials: 'include'
-        });
-        hideLoading();
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || `Erro ao alterar papel: ${response.status}`);
-        }
-        showToast(data.message, 'success');
-        if (modalEditUserRole) modalEditUserRole.style.display = 'none';
-        carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers); // Recarrega a lista de usuários
-    } catch (error) {
-        hideLoading();
-        console.error("Erro ao alterar papel:", error);
-        if (editUserRoleErrorMessage) {
-            editUserRoleErrorMessage.textContent = `Erro: ${error.message}`;
-            editUserRoleErrorMessage.style.display = 'block';
-        }
-        showToast(`Falha ao alterar papel: ${error.message}`, 'error');
-    }
-}
-    // TODO: Adicionar filtros para admin users se necessário e passá-los aqui
+    showLoading('corpo-tabela-admin-users');
+    currentPageAdminUsers = page; 
+    currentSortAdminUsers = sortConfig;
+    // Lembre-se de implementar a coleta de filtros para admin users se você adicionar inputs de filtro para esta tabela
+    // currentFiltersAdminUsers = collectFiltersForList('corpo-tabela-admin-users'); 
 
     // Resetar setas de ordenação (se for por header de tabela)
-    // ...
+    const adminUsersTableHeaders = document.querySelectorAll('#tabela-admin-users th[data-sortkey]');
+    if (adminUsersTableHeaders) {
+        adminUsersTableHeaders.forEach(th => {
+            const arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = ''; 
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+        const activeTh = document.querySelector(`#tabela-admin-users th[data-sortkey="${currentSortAdminUsers.key}"]`);
+        if (activeTh) {
+            const arrowSpan = activeTh.querySelector('.sort-arrow');
+            if (arrowSpan) arrowSpan.textContent = currentSortAdminUsers.direction === 'asc' ? ' ▲' : ' ▼';
+            activeTh.classList.add(currentSortAdminUsers.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    }
 
     try {
         const response = await fetch(API_URL_ADMIN_USERS, {credentials: 'include'});
-        hideLoading();
-        if (!response.ok) throw new Error('Erro ao buscar usuários.');
+        hideLoading(); // Movido para depois do fetch, mas antes de processar a resposta
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({message: `Erro HTTP ${response.status}`}));
+            throw new Error(errorData.message || 'Erro ao buscar usuários.');
+        }
         todosUsuariosCache = await response.json();
         
-        let itemsToRender = aplicarFiltros(todosUsuariosCache, {} /* filtros admin users */, 'user'); // Passar filtros se houver
+        let itemsToRender = aplicarFiltros(todosUsuariosCache, {} /* substitua {} pelos filtros de admin users se tiver */, 'user_admin'); 
         itemsToRender = aplicarOrdenacao(itemsToRender, currentSortAdminUsers.key ? `${currentSortAdminUsers.key}_${currentSortAdminUsers.direction}` : currentSortAdminUsers);
         
         renderizarTabelaAdminUsers(itemsToRender, currentPageAdminUsers);
     } catch(e) {
-        hideLoading();
+        hideLoading(); // Garante que esconde em caso de erro também
         console.error("Erro ao carregar usuários admin:", e);
-        setListMessage(corpoTabelaAdminUsers, `Erro: ${e.message}`);
+        setListMessage(corpoTabelaAdminUsers, `Erro ao carregar usuários: ${e.message}`);
         showToast(`Erro ao carregar usuários: ${e.message}`, 'error');
     }
-
+}
 
 function renderizarTabelaAdminUsers(users, page = 1) {
     if (!corpoTabelaAdminUsers) return;
