@@ -33,7 +33,7 @@ CORS(app,
          "http://localhost:5501",
          "http://127.0.0.1:5173",    # Porta padrão do Vite (se usar Vue/React com Vite no futuro)
          "http://localhost:5173",
-         "https://painel-chamados.vercel.app", # Sua URL Vercel informada
+         "https://painel-chamados.vercel.app/", # Sua URL Vercel informada
          # Se o Codespaces encaminhar sua porta do Live Server para uma URL pública, adicione-a aqui também.
          # Ex: "https://SEU-CODESPACE-NAME-5500.preview.app.github.dev"
      ]

@@ -1306,7 +1306,7 @@ function aplicarOrdenacao(items, sortOption) {
         let valB = b[key];
 
         // Tratamento para campos que podem ser de objetos aninhados (ex: nome_fornecedor em chamados)
-        if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor;
+        if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor; // Já está no objeto item
         if(key === 'nome_fornecedor' && b.nome_fornecedor) valB = b.nome_fornecedor;
         if(key === 'owner_username' && a.owner_username) valA = a.owner_username; 
         if(key === 'owner_username' && b.owner_username) valB = b.owner_username;
@@ -1436,7 +1436,7 @@ if (navLinks && contentSections) {
             event.preventDefault();
             const targetId = link.getAttribute('data-target');
             
-            if (!currentUser && targetId !== 'auth-section-placeholder' && targetId !== 'modal-login' && targetId !== 'modal-register'  ) { 
+            if (!currentUser && (targetId !== 'auth-section-placeholder' && targetId !== 'modal-login' && targetId !== 'modal-register'  ) ) { 
                  showToast("Por favor, faça login para acessar esta área.", "error"); 
                  return;
             }
@@ -1582,7 +1582,7 @@ function renderizarTabelaAdminUsers(users, page = 1) {
         });
     }
     
-    const paginationContainerForAdminUsers = document.getElementById('pagination-admin-users'); // Certifique-se que este div existe no HTML
+    const paginationContainerForAdminUsers = document.getElementById('pagination-admin-users'); 
     if (paginationContainerForAdminUsers) {
          setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', 
             (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)
