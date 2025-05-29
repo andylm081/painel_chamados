@@ -1,12 +1,10 @@
 // --- Constantes de API ---
-const API_BASE_URL = '/api'; // Caminhos relativos para deploy na Vercel
-// AUTH_API_URL não é mais estritamente necessária se todas as rotas de auth usam API_BASE_URL
+const API_BASE_URL = '/api'; 
 const API_URL_PAGAMENTOS = `${API_BASE_URL}/chamados_pagamento`;
 const API_URL_FORNECEDORES = `${API_BASE_URL}/fornecedores`;
 const API_URL_DIVERSOS = `${API_BASE_URL}/chamados_diversos`;
 const API_URL_ADMIN_USERS = `${API_BASE_URL}/admin/users`;
 
-// Rotas de autenticação
 const API_URL_REGISTER = `${API_BASE_URL}/register`;
 const API_URL_LOGIN = `${API_BASE_URL}/login`;
 const API_URL_LOGOUT = `${API_BASE_URL}/logout`;
@@ -134,7 +132,7 @@ const ITEMS_PER_PAGE_CARDS = 6;
 const ITEMS_PER_PAGE_TABLE = 10;
 
 let currentPagePag = 1, currentPageDiv = 1, currentPageForn = 1, currentPageAdminUsers = 1;
-let currentSortPag = 'data_vencimento_desc', currentSortDiv = 'data_escrituracao_desc';
+let currentSortPag = 'data_criacao_registro_desc', currentSortDiv = 'data_criacao_registro_desc'; // Alterado para data_criacao_registro
 let currentSortForn = { key: 'nome_fornecedor', direction: 'asc' };
 let currentSortAdminUsers = { key: 'username', direction: 'asc' };
 let currentFiltersPag = {}, currentFiltersDiv = {}, currentFiltersForn = {}, currentFiltersAdminUsers = {};
@@ -185,8 +183,7 @@ async function checkAuthStatus() {
             if (response.status === 401) { 
                  currentUser = null; updateAuthUI(false); return; 
             }
-            // Tenta ler como texto para outros erros HTTP que podem não ter corpo JSON
-            const errorText = await response.text().catch(() => `Erro HTTP ${response.status} ao verificar autenticação.`);
+            const errorText = await response.text().catch(() => `Erro HTTP ${response.status}`);
             throw new Error(`Falha ao verificar status: ${errorText.substring(0,150)}`);
         }
         const data = await response.json();
@@ -195,7 +192,7 @@ async function checkAuthStatus() {
     } catch (error) { 
         console.error("Erro CRÍTICO em checkAuthStatus:", error);
         currentUser = null; updateAuthUI(false); 
-        showToast(`Falha na autenticação inicial. O servidor pode estar indisponível.`, "error");
+        showToast(`Falha na autenticação inicial. Verifique sua conexão e se o backend está rodando.`, "error");
     }
 }
 
@@ -337,6 +334,7 @@ function setupFornecedorInput(inputNomeElem, inputHiddenIdElem, inputNumIdElem, 
             }
         });
          inputNomeElem.addEventListener('blur', function() {
+            // Só limpa N°ID se o nome estiver vazio E nenhum ID foi selecionado
             if (this.value.trim() === '' && inputHiddenIdElem.value === '') {
                 if(inputNumIdElem) inputNumIdElem.value = '';
                 inputNumIdElem.readOnly = false;
@@ -455,6 +453,10 @@ function renderizarTabelaFornecedores(fornecedores, page = 1) {
                 </td>`;
             corpoTabelaFornecedores.appendChild(tr);
         });
+         // Garante que a coluna do proprietário seja exibida ou ocultada corretamente para o mestre
+        document.querySelectorAll('.owner-column-data').forEach(el => {
+            el.style.display = currentUser.role === 'master' ? '' : 'none';
+        });
     }
     setupPagination(fornecedores.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-fornecedores', 
         (newPage) => carregarErenderizarFornecedores(newPage, currentSortForn, currentFiltersForn)
@@ -525,8 +527,7 @@ if (corpoTabelaFornecedores) {
 
                         if ( (currentPageForn * ITEMS_PER_PAGE_TABLE) - (ITEMS_PER_PAGE_TABLE -1 ) > totalItemsAposExclusao && currentPageForn > 1) {
                            paginaAlvo = currentPageForn - 1;
-                        }
-                         if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
+                        } else if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
                             paginaAlvo = totalPagesAposExclusao;
                         } else if (totalItemsAposExclusao === 0){
                              paginaAlvo = 1;
@@ -547,7 +548,7 @@ if (corpoTabelaFornecedores) {
             const pagTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
             if (pagTabLink) {
                 if (!pagTabLink.classList.contains('active')) {
-                     pagTabLink.click(); // Isso deve resetar os filtros da aba de destino
+                     pagTabLink.click(); 
                 }
                 // Espera a lógica de clique na aba (que reseta filtros) ser processada
                 setTimeout(() => { 
@@ -556,15 +557,9 @@ if (corpoTabelaFornecedores) {
                         filtroFornPag.value = supplierName;
                         filtroFornPag.dispatchEvent(new Event('input', { bubbles: true })); 
                     }
-                     // Opcionalmente, filtrar também em Chamados Diversos
-                    const filtroFornDiv = document.getElementById('filtro-fornecedor-chamado-div');
-                    if(filtroFornDiv && document.getElementById('chamados-diversos-section')?.style.display === 'block'){
-                        filtroFornDiv.value = supplierName;
-                        filtroFornDiv.dispatchEvent(new Event('input', {bubbles: true}));
-                    }
-                }, 250); // Aumentado o delay para garantir que a troca de aba e reset de filtros ocorra
+                }, 250); 
             }
-            showToast(`Filtrando chamados por: ${supplierName}`, 'info');
+            showToast(`Filtrando chamados de pagamento por: ${supplierName}`, 'info');
         }
     });
 }
@@ -734,8 +729,13 @@ async function abrirModalAcompanhamentosChamadoPag(chamadoId) {
         const chamado = await response.json();
 
         acompanhamentosChamadoPagTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
+        let ownerInfoHtml = '';
+        if (chamado.owner_username) {
+            ownerInfoHtml = `<p><strong>Registrado por (Chamado Original):</strong> ${chamado.owner_username}</p>`;
+        }
         acompanhamentosChamadoPagInfo.innerHTML = `
             <p><strong>ID do Chamado:</strong> ${chamado.id}</p>
+            ${ownerInfoHtml}
             <p><strong>N° Chamado Externo:</strong> ${chamado.numero_chamado_origem || 'N/A'}</p>
             <p><strong>N° Fatura:</strong> ${chamado.numero_fatura || 'N/A'}</p>
             <p><strong>Fornecedor:</strong> ${chamado.nome_fornecedor || 'N/A'} (ID: ${chamado.fornecedor_id})</p>
@@ -780,7 +780,11 @@ if (formNovoAcompanhamentoPag) {
         const usuarioInput = document.getElementById('acompanhamento-pag-usuario');
         
         const descricao = descricaoInput.value;
-        const usuario = usuarioInput.value;
+        let usuario = usuarioInput.value.trim(); // Pega o valor do input
+        if(!usuario && currentUser) { // Se o input estiver vazio, usa o nome do usuário logado
+            usuario = currentUser.username;
+        }
+
 
         if (!descricao.trim()) {
             showToast("A descrição do acompanhamento não pode ser vazia.", "error");
@@ -791,7 +795,7 @@ if (formNovoAcompanhamentoPag) {
             const response = await fetch(`${API_URL_PAGAMENTOS}/${chamadoId}/acompanhamentos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ descricao: descricao, usuario: usuario || null }),
+                body: JSON.stringify({ descricao: descricao, usuario: usuario || null }), // Envia o usuário determinado
                 credentials: 'include'
             });
             hideLoading();
@@ -845,8 +849,7 @@ function abrirModalRegistrarChamadoDiv() {
     }
     if(inputNomeFornecedorChamadoDiv) inputNomeFornecedorChamadoDiv.value = '';
     if (modalChamadoDivErrorMessage) modalChamadoDivErrorMessage.style.display = 'none';
-    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor, 
-    // então geralmente estará atualizado.
+    // carregarFornecedoresGlobais() é chamado na init e após CRUD de fornecedor
     if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
 }
 
@@ -878,11 +881,17 @@ async function abrirModalEditarChamadoDiv(chamadoId) {
         const form = formRegistrarEditarChamadoDiv; // Garante que está se referindo ao formulário correto
         if(form){
             // Acessando elementos pelo ID específico do formulário _div
-            if(form.elements['numero_chamado_origem_div']) form.elements['numero_chamado_origem_div'].value = chamado.numero_chamado_origem || '';
-            if(form.elements['valor_div']) form.elements['valor_div'].value = chamado.valor !== null ? chamado.valor : ''; 
-            if(form.elements['data_escrituracao_div']) form.elements['data_escrituracao_div'].value = formatDateForInput(chamado.data_escrituracao);
-            if(form.elements['situacao_div']) form.elements['situacao_div'].value = chamado.situacao || 'Aberto';
-            if(form.elements['observacoes_div']) form.elements['observacoes_div'].value = chamado.observacoes || '';
+            const numeroChamadoOrigemDiv = form.querySelector('#numero_chamado_origem_div');
+            const valorDiv = form.querySelector('#valor_div');
+            const dataEscrituracaoDiv = form.querySelector('#data_escrituracao_div');
+            const situacaoDiv = form.querySelector('#situacao_div');
+            const observacoesDiv = form.querySelector('#observacoes_div');
+
+            if(numeroChamadoOrigemDiv) numeroChamadoOrigemDiv.value = chamado.numero_chamado_origem || '';
+            if(valorDiv) valorDiv.value = chamado.valor !== null ? chamado.valor : ''; 
+            if(dataEscrituracaoDiv) dataEscrituracaoDiv.value = formatDateForInput(chamado.data_escrituracao);
+            if(situacaoDiv) situacaoDiv.value = chamado.situacao || 'Aberto';
+            if(observacoesDiv) observacoesDiv.value = chamado.observacoes || '';
         }
 
         if (modalRegistrarEditarChamadoDiv) modalRegistrarEditarChamadoDiv.style.display = 'block';
@@ -999,6 +1008,8 @@ async function abrirModalAcompanhamentosChamadoDiv(chamadoId) {
 
         acompanhamentoChamadoDivIdInput.value = chamado.id;
         if(formNovoAcompanhamentoDiv) formNovoAcompanhamentoDiv.reset();
+        const usuarioAcompanhamentoDiv = document.getElementById('acompanhamento-div-usuario');
+        if(usuarioAcompanhamentoDiv && currentUser) usuarioAcompanhamentoDiv.value = currentUser.username;
         
         acompanhamentosChamadoDivLista.innerHTML = '';
         if (chamado.acompanhamentos && chamado.acompanhamentos.length > 0) {
@@ -1031,7 +1042,10 @@ if (formNovoAcompanhamentoDiv) {
         const usuarioInput = document.getElementById('acompanhamento-div-usuario');
         
         const descricao = descricaoInput.value;
-        const usuario = usuarioInput.value;
+        let usuario = usuarioInput.value.trim();
+        if(!usuario && currentUser) { 
+            usuario = currentUser.username;
+        }
 
         if (!descricao.trim()) {
             showToast("A descrição do acompanhamento não pode ser vazia.", "error");
@@ -1305,12 +1319,10 @@ function aplicarOrdenacao(items, sortOption) {
         let valA = a[key];
         let valB = b[key];
 
-        // Tratamento para campos que podem ser de objetos aninhados (ex: nome_fornecedor em chamados)
-        if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor; // Já está no objeto item
+        if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor; 
         if(key === 'nome_fornecedor' && b.nome_fornecedor) valB = b.nome_fornecedor;
         if(key === 'owner_username' && a.owner_username) valA = a.owner_username; 
         if(key === 'owner_username' && b.owner_username) valB = b.owner_username;
-
 
         if (key && key.startsWith('data_') && valA && valB) {
             valA = new Date(valA);
@@ -1436,9 +1448,11 @@ if (navLinks && contentSections) {
             event.preventDefault();
             const targetId = link.getAttribute('data-target');
             
-            if (!currentUser && (targetId !== 'auth-section-placeholder' && targetId !== 'modal-login' && targetId !== 'modal-register'  ) ) { 
-                 showToast("Por favor, faça login para acessar esta área.", "error"); 
-                 return;
+            if (!currentUser && targetId !== 'auth-section-placeholder') { // Se não logado e não é a tela de placeholder
+                 if(targetId !== 'modal-login' && targetId !== 'modal-register') { // Permite abrir modais de login/registro
+                    showToast("Por favor, faça login para acessar esta área.", "error"); 
+                    return;
+                 }
             }
             if (targetId === 'admin-users-section' && (!currentUser || currentUser.role !== 'master')) {
                  showToast("Acesso restrito a administradores.", "error"); return;
@@ -1455,8 +1469,8 @@ if (navLinks && contentSections) {
                 currentPagePag = 1; currentPageDiv = 1; currentPageForn = 1; currentPageAdminUsers = 1;
                 currentFiltersPag = {}; currentFiltersDiv = {}; currentFiltersForn = {}; currentFiltersAdminUsers = {};
                 document.querySelectorAll('.filter-input').forEach(fi => fi.value = ''); 
-                if(sortChamadoPagSelect) sortChamadoPagSelect.value = 'data_vencimento_desc'; currentSortPag = 'data_vencimento_desc';
-                if(sortChamadoDivSelect) sortChamadoDivSelect.value = 'data_escrituracao_desc'; currentSortDiv = 'data_escrituracao_desc';
+                if(sortChamadoPagSelect) sortChamadoPagSelect.value = 'data_criacao_registro_desc'; currentSortPag = 'data_criacao_registro_desc';
+                if(sortChamadoDivSelect) sortChamadoDivSelect.value = 'data_criacao_registro_desc'; currentSortDiv = 'data_criacao_registro_desc';
                 currentSortForn = {key:'nome_fornecedor', direction:'asc'};
                 currentSortAdminUsers = {key:'username', direction:'asc'};
                 if(tabelaFornecedoresHeaders) tabelaFornecedoresHeaders.forEach(h => {const arrow = h.querySelector('.sort-arrow'); if(arrow) arrow.textContent = ''; h.classList.remove('sort-asc','sort-desc');});
@@ -1514,7 +1528,6 @@ function init() {
     setupGlobalEventListeners(); 
     setupFornecedorInput(inputNomeFornecedorChamadoPag, inputHiddenFornecedorIdChamadoPag, inputNumIdFornecedorChamadoPag, datalistFornecedores);
     setupFornecedorInput(inputNomeFornecedorChamadoDiv, inputHiddenFornecedorIdChamadoDiv, inputNumIdFornecedorChamadoDiv, datalistFornecedoresDiv);
-    // setupFilterListeners e setupSortListeners são chamados DENTRO de updateAuthUI quando o usuário está logado.
 }
 
 document.addEventListener('DOMContentLoaded', init);
@@ -1582,11 +1595,14 @@ function renderizarTabelaAdminUsers(users, page = 1) {
         });
     }
     
-    const paginationContainerForAdminUsers = document.getElementById('pagination-admin-users'); 
-    if (paginationContainerForAdminUsers) {
+    // Paginação para Admin Users Table - Certifique-se que 'pagination-admin-users' existe no HTML
+    const paginationContainerForAdmin = document.getElementById('pagination-admin-users');
+    if (paginationContainerForAdmin) { // Só chama se o container existir
          setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', 
             (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)
         ); 
+    } else if (users.length > ITEMS_PER_PAGE_TABLE) { // Avisa se precisa de paginação mas o container não existe
+        console.warn("Container de paginação 'pagination-admin-users' não encontrado no HTML para a tabela de admin.");
     }
 }
 
@@ -1625,7 +1641,10 @@ if (corpoTabelaAdminUsers) {
 
 async function handleEditUserRoleSubmit(event) {
     event.preventDefault();
-    if (!adminEditUserId || !editUserRoleSelect || !editUserRoleErrorMessage) return;
+    if (!adminEditUserId || !editUserRoleSelect || !editUserRoleErrorMessage) {
+         showToast("Erro: Não foi possível identificar o usuário para edição de papel.", "error");
+        return;
+    }
     const newRole = editUserRoleSelect.value;
     if (!newRole) { showToast("Papel inválido.", "error"); return; }
 
@@ -1644,7 +1663,7 @@ async function handleEditUserRoleSubmit(event) {
         carregarErenderizarAdminUsers(currentPageAdminUsers, currentSortAdminUsers, currentFiltersAdminUsers);
     } catch (error) {
         hideLoading(); console.error("Erro ao alterar papel:", error);
-        if(editUserRoleErrorMessage) {editUserRoleErrorMessage.textContent = error.message; editUserRoleErrorMessage.style.display = 'block';}
+        if(editUserRoleErrorMessage) {editUserRoleErrorMessage.textContent = `Erro: ${error.message}`; editUserRoleErrorMessage.style.display = 'block';}
         showToast(`Falha ao alterar papel: ${error.message}`, 'error');
     }
 }
