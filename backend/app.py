@@ -23,11 +23,14 @@ CORS(app,
          "http://localhost:5501",
          "http://127.0.0.1:5173", 
          "http://localhost:5173",
-         "https://painel-chamados.vercel.app" # Sua URL Vercel
+         "https://painel-chamados.vercel.app", # Sua URL Vercel
+         "https://mindful-manifestation-painel-chamados.vercel.app", # Nova URL Vercel que você mencionou
+         "https://refreshing-patience-painel-chamados.vercel.app"  # Outra URL Vercel
+         # Adicione a URL do seu Codespaces Live Server se estiver usando para teste
      ]
 )
 
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', '46bab50c28fbb3cc127a08e4855f75d9d754646731267166') # Sua chave
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', '46bab50c28fbb3cc127a08e4855f75d9d754646731267166')
 DATABASE_URL_FROM_ENV = os.environ.get('DATABASE_URL_PROD')
 SQLITE_FALLBACK_URI = 'sqlite:///' + os.path.join(base_dir, 'gestao_chamados_local_fallback.db')
 
@@ -50,7 +53,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.session_protection = "strong"
 
-
 # --- Modelos ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -58,9 +60,9 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='user', nullable=False) 
-    fornecedores = db.relationship('Fornecedor', backref='owner', lazy='dynamic', cascade="all, delete-orphan")
-    chamados_pagamento = db.relationship('ChamadoPagamento', backref='owner', lazy='dynamic', cascade="all, delete-orphan")
-    chamados_diversos = db.relationship('ChamadoDiverso', backref='owner', lazy='dynamic', cascade="all, delete-orphan")
+    fornecedores = db.relationship('Fornecedor', backref='owner_user', lazy='dynamic', cascade="all, delete-orphan") # Alterado backref
+    chamados_pagamento = db.relationship('ChamadoPagamento', backref='owner_user', lazy='dynamic', cascade="all, delete-orphan") # Alterado backref
+    chamados_diversos = db.relationship('ChamadoDiverso', backref='owner_user', lazy='dynamic', cascade="all, delete-orphan") # Alterado backref
     def set_password(self, password): self.password_hash = generate_password_hash(password)
     def check_password(self, password): return check_password_hash(self.password_hash, password)
     def to_dict(self): return {"id": self.id, "username": self.username, "email": self.email, "role": self.role}
@@ -75,7 +77,7 @@ class Fornecedor(db.Model):
     chamados_diversos = db.relationship('ChamadoDiverso', backref='fornecedor_obj', lazy='dynamic')
     def to_dict(self): 
         data = {"id": self.id, "user_id": self.user_id, "numero_identificacao_fornecedor": self.numero_identificacao_fornecedor, "nome_fornecedor": self.nome_fornecedor}
-        if hasattr(self, 'owner') and self.owner: data['owner_username'] = self.owner.username
+        if hasattr(self, 'owner_user') and self.owner_user: data['owner_username'] = self.owner_user.username # Usando owner_user
         return data
 
 class ChamadoPagamento(db.Model):
@@ -91,7 +93,7 @@ class ChamadoPagamento(db.Model):
         data = {"id": self.id,"user_id":self.user_id,"numero_chamado_origem": self.numero_chamado_origem,"numero_fatura": self.numero_fatura,"lancamento": self.lancamento,"fornecedor_id": self.fornecedor_id,"valor": self.valor,"data_escrituracao": self.data_escrituracao.isoformat() if self.data_escrituracao else None,"prazo_maximo_escrituracao": self.prazo_maximo_escrituracao.isoformat() if self.prazo_maximo_escrituracao else None,"data_vencimento": self.data_vencimento.isoformat() if self.data_vencimento else None,"situacao": self.situacao,"observacoes_gerais": self.observacoes_gerais,"data_criacao_registro": self.data_criacao_registro.isoformat(),"data_ultima_atualizacao_chamado": self.data_ultima_atualizacao_chamado.isoformat()}
         if include_fornecedor and self.fornecedor_obj: data['nome_fornecedor'] = self.fornecedor_obj.nome_fornecedor; data['numero_identificacao_fornecedor'] = self.fornecedor_obj.numero_identificacao_fornecedor
         if include_acompanhamentos and self.acompanhamentos: data['acompanhamentos'] = sorted([a.to_dict() for a in self.acompanhamentos.all()], key=lambda x: x['data_entrada'], reverse=True)
-        if hasattr(self, 'owner') and self.owner: data['owner_username'] = self.owner.username
+        if hasattr(self, 'owner_user') and self.owner_user: data['owner_username'] = self.owner_user.username # Usando owner_user
         return data
 
 class AcompanhamentoChamadoPagamento(db.Model):
@@ -111,7 +113,7 @@ class ChamadoDiverso(db.Model):
         data = {"id": self.id,"user_id":self.user_id,"numero_chamado_origem": self.numero_chamado_origem,"fornecedor_id": self.fornecedor_id,"valor": self.valor,"data_escrituracao": self.data_escrituracao.isoformat() if self.data_escrituracao else None,"situacao": self.situacao,"observacoes": self.observacoes,"data_criacao_registro": self.data_criacao_registro.isoformat(),"data_ultima_atualizacao_chamado": self.data_ultima_atualizacao_chamado.isoformat()}
         if include_fornecedor and self.fornecedor_obj: data['nome_fornecedor'] = self.fornecedor_obj.nome_fornecedor; data['numero_identificacao_fornecedor'] = self.fornecedor_obj.numero_identificacao_fornecedor
         if include_acompanhamentos and self.acompanhamentos: data['acompanhamentos'] = sorted([a.to_dict() for a in self.acompanhamentos.all()], key=lambda x: x['data_entrada'], reverse=True)
-        if hasattr(self, 'owner') and self.owner: data['owner_username'] = self.owner.username
+        if hasattr(self, 'owner_user') and self.owner_user: data['owner_username'] = self.owner_user.username # Usando owner_user
         return data
 
 class AcompanhamentoChamadoDiverso(db.Model):
@@ -214,10 +216,7 @@ def handle_fornecedor_id(id):
         if num_id_f and Fornecedor.query.filter_by(numero_identificacao_fornecedor=num_id_f, user_id=current_user.id).filter(Fornecedor.id != id).first(): return jsonify({"message": f"Outro fornecedor seu com N° ID '{num_id_f}' já existe."}), 409
         fornecedor.nome_fornecedor=nome_f; fornecedor.numero_identificacao_fornecedor=num_id_f; db.session.commit(); return jsonify(fornecedor.to_dict()), 200
     if request.method == 'DELETE':
-        # Verifica se há chamados associados ANTES de tentar deletar
-        if ChamadoPagamento.query.filter_by(fornecedor_id=id, user_id=current_user.id).first() or \
-           ChamadoDiverso.query.filter_by(fornecedor_id=id, user_id=current_user.id).first():
-            return jsonify({"message": "Não é possível excluir. Este fornecedor possui chamados seus associados. Remova ou desassocie os chamados primeiro."}), 400
+        if fornecedor.chamados_pagamento.first() or fornecedor.chamados_diversos.first(): return jsonify({"message": "Não é possível excluir. Este fornecedor possui chamados associados."}), 400
         db.session.delete(fornecedor); db.session.commit(); return jsonify({"message": "Fornecedor deletado com sucesso"}), 200
 
 @app.route('/api/chamados_pagamento', methods=['GET', 'POST'])
@@ -236,10 +235,8 @@ def handle_chamados_pagamento():
         except Exception as e: db.session.rollback(); return jsonify({"message":"Erro ao processar fornecedor","error":str(e)}),500
         novo = ChamadoPagamento(user_id=current_user.id, numero_chamado_origem=data['numero_chamado_origem'],numero_fatura=data.get('numero_fatura'),lancamento=data.get('lancamento'),fornecedor_id=forn_id,valor=float(data['valor']),data_escrituracao=parse_date_or_none(data.get('data_escrituracao')),prazo_maximo_escrituracao=parse_date_or_none(data.get('prazo_maximo_escrituracao')),data_vencimento=parse_date_or_none(data['data_vencimento']),situacao=data['situacao'],observacoes_gerais=data.get('observacoes_gerais')); 
         db.session.add(novo); db.session.commit(); return jsonify(novo.to_dict(include_fornecedor=True)),201
-    
     query = ChamadoPagamento.query if current_user.role == 'master' else ChamadoPagamento.query.filter_by(user_id=current_user.id)
-    # Ajuste para ordenação padrão: data_criacao_registro mais recente
-    chamados = query.order_by(ChamadoPagamento.data_criacao_registro.desc()).all()
+    chamados = query.order_by(ChamadoPagamento.data_criacao_registro.desc()).all() # Ordenação padrão
     return jsonify([c.to_dict(include_fornecedor=True) for c in chamados]), 200
 
 @app.route('/api/chamados_pagamento/<int:id>', methods=['GET', 'PUT', 'DELETE'])
@@ -266,8 +263,7 @@ def add_acompanhamento_chamado_pagamento(chamado_pag_id):
     if chamado.user_id != current_user.id and current_user.role != 'master': return jsonify({"message": "Acesso não autorizado."}), 403
     data = request.get_json()
     if not data or not data.get('descricao') or not data.get('descricao').strip(): return jsonify({"message": "Descrição obrigatória"}), 400
-    # Pega o nome de usuário do formulário, se fornecido, senão usa o do current_user
-    usuario_acompanhamento = data.get('usuario_responsavel', '').strip() or current_user.username
+    usuario_acompanhamento = data.get('usuario', '').strip() or current_user.username # Usuário que fez o acompanhamento
     novo = AcompanhamentoChamadoPagamento(chamado_pagamento_id=chamado_pag_id, descricao=data['descricao'], usuario=usuario_acompanhamento)
     db.session.add(novo); db.session.commit(); return jsonify(novo.to_dict()), 201
 
@@ -288,8 +284,7 @@ def handle_chamados_diversos():
         novo = ChamadoDiverso(user_id=current_user.id, numero_chamado_origem=data['numero_chamado_origem'],fornecedor_id=forn_id,valor=valor_float,data_escrituracao=parse_date_or_none(data['data_escrituracao']),situacao=data['situacao'],observacoes=data.get('observacoes')); 
         db.session.add(novo); db.session.commit(); return jsonify(novo.to_dict(include_fornecedor=True)),201
     query = ChamadoDiverso.query if current_user.role == 'master' else ChamadoDiverso.query.filter_by(user_id=current_user.id)
-    # Ajuste para ordenação padrão: data_criacao_registro mais recente
-    chamados = query.order_by(ChamadoDiverso.data_criacao_registro.desc()).all()
+    chamados = query.order_by(ChamadoDiverso.data_criacao_registro.desc()).all() # Ordenação padrão
     return jsonify([c.to_dict(include_fornecedor=True) for c in chamados]), 200
 
 @app.route('/api/chamados_diversos/<int:id>', methods=['GET', 'PUT', 'DELETE'])
@@ -318,7 +313,7 @@ def add_acompanhamento_chamado_diverso(chamado_div_id):
     if chamado.user_id != current_user.id and current_user.role != 'master': return jsonify({"message": "Acesso não autorizado."}), 403
     data = request.get_json()
     if not data or not data.get('descricao') or not data.get('descricao').strip(): return jsonify({"message": "Descrição obrigatória"}), 400
-    usuario_acompanhamento = data.get('usuario_responsavel', '').strip() or current_user.username
+    usuario_acompanhamento = data.get('usuario', '').strip() or current_user.username
     novo = AcompanhamentoChamadoDiverso(chamado_diverso_id=chamado_div_id, descricao=data['descricao'], usuario=usuario_acompanhamento)
     db.session.add(novo); db.session.commit(); return jsonify(novo.to_dict()), 201
 
@@ -327,7 +322,7 @@ def add_acompanhamento_chamado_diverso(chamado_div_id):
 @login_required
 def admin_get_users():
     if current_user.role != 'master': return jsonify({"message": "Acesso não autorizado."}), 403
-    users = User.query.order_by(User.username).all() # Ordena por nome de usuário
+    users = User.query.order_by(User.username).all()
     return jsonify([user.to_dict() for user in users]), 200
 
 @app.route('/api/admin/users/<int:user_id_to_change>/role', methods=['PUT'])
@@ -335,8 +330,8 @@ def admin_get_users():
 def admin_change_user_role(user_id_to_change):
     if current_user.role != 'master': return jsonify({"message": "Acesso não autorizado."}), 403
     user_to_change = User.query.get_or_404(user_id_to_change)
-    if user_to_change.username == 'aslima' or user_to_change.id == current_user.id: # Impede alterar o papel do usuário 'aslima' ou de si mesmo
-        return jsonify({"message": "Não é possível alterar o papel deste usuário."}), 403
+    if user_to_change.username == 'aslima' or user_to_change.id == current_user.id : # Protege o usuário "aslima" e o próprio mestre
+        return jsonify({"message": "Não é possível alterar o papel deste usuário por esta interface."}), 403
     data = request.get_json(); new_role = data.get('role')
     if new_role not in ['user', 'master']: return jsonify({"message": "Papel inválido. Use 'user' ou 'master'."}), 400
     user_to_change.role = new_role; db.session.commit()
@@ -356,47 +351,31 @@ def admin_delete_user(user_id_to_delete):
 # --- Comando CLI para criar usuário master ---
 @app.cli.command("create-master")
 def create_master_user():
-    """Cria um usuário master inicial ou o atualiza se já existir com outro papel."""
+    """Cria ou atualiza um usuário master inicial."""
     username = input("Digite o nome de usuário para o master (ex: aslima): ").strip()
     email = input(f"Digite o email para {username}: ").strip()
-    password = input(f"Digite a senha para {username}: ")
+    password = input(f"Digite a senha para {username} (mín. 6 caracteres): ")
 
-    if not username or not email or not password:
-        print("Nome de usuário, email e senha não podem ser vazios.")
-        return
-    if len(password) < 6:
-        print("Senha deve ter pelo menos 6 caracteres.")
-        return
-    try: 
-        validate_email(email)
-    except EmailNotValidError as e: 
-        print(f"Email inválido: {e}")
-        return
+    if not username or not email or not password: print("Nome de usuário, email e senha não podem ser vazios."); return
+    if len(password) < 6: print("Senha deve ter pelo menos 6 caracteres."); return
+    try: validate_email(email)
+    except EmailNotValidError as e: print(f"Email inválido: {e}"); return
     
     user = User.query.filter_by(username=username).first()
-    if user: # Usuário já existe
-        if user.email != email: # Se o email for diferente, avisa e não prossegue
+    if user: 
+        if user.email != email:
             user_with_email = User.query.filter_by(email=email).first()
             if user_with_email and user_with_email.id != user.id:
-                print(f"Erro: O email {email} já está em uso por outro usuário ({user_with_email.username}).")
-                return
-            user.email = email # Atualiza o email se não estiver em uso
+                print(f"Erro: O email {email} já está em uso por outro usuário ({user_with_email.username})."); return
+            user.email = email 
             print(f"Email do usuário '{username}' atualizado para '{email}'.")
-
-        user.set_password(password)
-        user.role = 'master'
-        db.session.commit()
+        user.set_password(password); user.role = 'master'; db.session.commit()
         print(f"Usuário '{username}' atualizado para master e senha redefinida.")
-    else: # Usuário não existe, criar novo
-        # Verifica se o email já está em uso por outro usuário
+    else: 
         if User.query.filter_by(email=email).first():
-            print(f"Erro: O email {email} já está em uso por outro usuário.")
-            return
-        
-        master_user = User(username=username, email=email, role='master')
-        master_user.set_password(password)
-        db.session.add(master_user)
-        db.session.commit()
+            print(f"Erro: O email {email} já está em uso por outro usuário."); return
+        master_user = User(username=username, email=email, role='master'); master_user.set_password(password)
+        db.session.add(master_user); db.session.commit()
         print(f"Usuário master '{username}' criado com sucesso!")
 
 if __name__ == '__main__':

@@ -1,10 +1,12 @@
 // --- Constantes de API ---
-const API_BASE_URL = '/api'; 
+const API_BASE_URL = '/api'; // Caminhos relativos para deploy na Vercel
+// AUTH_API_URL não é mais estritamente necessária se todas as rotas de auth usam API_BASE_URL
 const API_URL_PAGAMENTOS = `${API_BASE_URL}/chamados_pagamento`;
 const API_URL_FORNECEDORES = `${API_BASE_URL}/fornecedores`;
 const API_URL_DIVERSOS = `${API_BASE_URL}/chamados_diversos`;
 const API_URL_ADMIN_USERS = `${API_BASE_URL}/admin/users`;
 
+// Rotas de autenticação
 const API_URL_REGISTER = `${API_BASE_URL}/register`;
 const API_URL_LOGIN = `${API_BASE_URL}/login`;
 const API_URL_LOGOUT = `${API_BASE_URL}/logout`;
@@ -132,7 +134,7 @@ const ITEMS_PER_PAGE_CARDS = 6;
 const ITEMS_PER_PAGE_TABLE = 10;
 
 let currentPagePag = 1, currentPageDiv = 1, currentPageForn = 1, currentPageAdminUsers = 1;
-let currentSortPag = 'data_criacao_registro_desc', currentSortDiv = 'data_criacao_registro_desc'; // Alterado para data_criacao_registro
+let currentSortPag = 'data_criacao_registro_desc', currentSortDiv = 'data_criacao_registro_desc';
 let currentSortForn = { key: 'nome_fornecedor', direction: 'asc' };
 let currentSortAdminUsers = { key: 'username', direction: 'asc' };
 let currentFiltersPag = {}, currentFiltersDiv = {}, currentFiltersForn = {}, currentFiltersAdminUsers = {};
@@ -334,7 +336,6 @@ function setupFornecedorInput(inputNomeElem, inputHiddenIdElem, inputNumIdElem, 
             }
         });
          inputNomeElem.addEventListener('blur', function() {
-            // Só limpa N°ID se o nome estiver vazio E nenhum ID foi selecionado
             if (this.value.trim() === '' && inputHiddenIdElem.value === '') {
                 if(inputNumIdElem) inputNumIdElem.value = '';
                 inputNumIdElem.readOnly = false;
@@ -430,17 +431,26 @@ function renderizarTabelaFornecedores(fornecedores, page = 1) {
     const start = (page - 1) * ITEMS_PER_PAGE_TABLE;
     const end = start + ITEMS_PER_PAGE_TABLE;
     const paginatedItems = fornecedores.slice(start, end);
-    const cols = (currentUser && currentUser.role === 'master' && document.querySelector('.owner-column')?.style.display !== 'none' ? 1 : 0) + 4;
+    
+    // Determina o número de colunas baseado se a coluna de owner está visível
+    let colspanCount = 4; // Colunas base: ID, Nome, N° ID, Ações
+    const ownerColumnHeader = document.querySelector('#tabela-fornecedores .owner-column');
+    if (currentUser && currentUser.role === 'master' && ownerColumnHeader && ownerColumnHeader.style.display !== 'none') {
+        colspanCount = 5;
+    }
 
 
     if (paginatedItems.length === 0) {
-        setListMessage(corpoTabelaFornecedores, `<tr><td colspan="${cols}">Nenhum fornecedor encontrado ${Object.keys(currentFiltersForn).length > 0 ? 'para os filtros aplicados' : ''}.</td></tr>`);
+        setListMessage(corpoTabelaFornecedores, `<tr><td colspan="${colspanCount}">Nenhum fornecedor encontrado ${Object.keys(currentFiltersForn).length > 0 ? 'para os filtros aplicados' : ''}.</td></tr>`);
     } else {
         paginatedItems.forEach(f => {
             const tr = document.createElement('tr');
             let ownerColumnHtml = '';
             if (currentUser && currentUser.role === 'master') {
-                ownerColumnHtml = `<td data-label="Usuário" class="owner-column-data" style="${document.querySelector('.owner-column')?.style.display || ''}">${f.owner_username || 'N/A'}</td>`;
+                // A coluna HTML só é adicionada se o header dela estiver visível
+                if (ownerColumnHeader && ownerColumnHeader.style.display !== 'none') {
+                    ownerColumnHtml = `<td data-label="Usuário" class="owner-column-data">${f.owner_username || 'N/A'}</td>`;
+                }
             }
             tr.innerHTML = `
                 <td data-label="ID">${f.id}</td>
@@ -452,10 +462,6 @@ function renderizarTabelaFornecedores(fornecedores, page = 1) {
                     <button class="btn btn-sm btn-danger btn-excluir-fornecedor" data-id="${f.id}" title="Excluir Fornecedor">Excluir</button>
                 </td>`;
             corpoTabelaFornecedores.appendChild(tr);
-        });
-         // Garante que a coluna do proprietário seja exibida ou ocultada corretamente para o mestre
-        document.querySelectorAll('.owner-column-data').forEach(el => {
-            el.style.display = currentUser.role === 'master' ? '' : 'none';
         });
     }
     setupPagination(fornecedores.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-fornecedores', 
@@ -485,7 +491,7 @@ if (formNovoEditarFornecedor) {
             if (!response.ok) { throw new Error(responseData.message || `HTTP Error: ${response.status}`); }
             fecharModalNovoEditarFornecedor();
             const targetPage = method === 'POST' ? 1 : currentPageForn;
-            currentFiltersForn = {}; // Reseta filtros ao criar/editar com sucesso
+            currentFiltersForn = {}; 
             document.querySelectorAll('.filter-input[data-list="corpo-tabela-fornecedores"]').forEach(fi => fi.value = '');
             carregarErenderizarFornecedores(targetPage, currentSortForn, currentFiltersForn);
             carregarFornecedoresGlobais(); 
@@ -521,16 +527,11 @@ if (corpoTabelaFornecedores) {
                         if (!response.ok) { throw new Error(data.message || `Erro ao excluir fornecedor: ${response.status}`); }
                         showToast('Fornecedor excluído com sucesso!', 'success');
                         
-                        const totalItemsAposExclusao = todosFornecedoresCache.filter(f => f.id !== parseInt(fornecedorId)).length; 
-                        const totalPagesAposExclusao = Math.ceil(totalItemsAposExclusao / ITEMS_PER_PAGE_TABLE);
+                        // Tenta manter a página atual ou ir para a anterior se a atual ficar vazia
+                        let itemsNaPaginaAtual = Array.from(corpoTabelaFornecedores.querySelectorAll('tr')).filter(tr => !tr.querySelector('td[colspan]')).length;
                         let paginaAlvo = currentPageForn;
-
-                        if ( (currentPageForn * ITEMS_PER_PAGE_TABLE) - (ITEMS_PER_PAGE_TABLE -1 ) > totalItemsAposExclusao && currentPageForn > 1) {
-                           paginaAlvo = currentPageForn - 1;
-                        } else if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
-                            paginaAlvo = totalPagesAposExclusao;
-                        } else if (totalItemsAposExclusao === 0){
-                             paginaAlvo = 1;
+                        if(itemsNaPaginaAtual === 1 && currentPageForn > 1) { // Era o último item da página > 1
+                            paginaAlvo = currentPageForn - 1;
                         }
                         carregarErenderizarFornecedores(paginaAlvo, currentSortForn, currentFiltersForn);
                         carregarFornecedoresGlobais();
@@ -550,7 +551,6 @@ if (corpoTabelaFornecedores) {
                 if (!pagTabLink.classList.contains('active')) {
                      pagTabLink.click(); 
                 }
-                // Espera a lógica de clique na aba (que reseta filtros) ser processada
                 setTimeout(() => { 
                     const filtroFornPag = document.getElementById('filtro-fornecedor-chamado-pag');
                     if (filtroFornPag) {
@@ -730,12 +730,12 @@ async function abrirModalAcompanhamentosChamadoPag(chamadoId) {
 
         acompanhamentosChamadoPagTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
         let ownerInfoHtml = '';
-        if (chamado.owner_username) {
+        if (chamado.owner_username) { // Ajuste para mostrar quem registrou o chamado
             ownerInfoHtml = `<p><strong>Registrado por (Chamado Original):</strong> ${chamado.owner_username}</p>`;
         }
         acompanhamentosChamadoPagInfo.innerHTML = `
             <p><strong>ID do Chamado:</strong> ${chamado.id}</p>
-            ${ownerInfoHtml}
+            ${ownerInfoHtml} 
             <p><strong>N° Chamado Externo:</strong> ${chamado.numero_chamado_origem || 'N/A'}</p>
             <p><strong>N° Fatura:</strong> ${chamado.numero_fatura || 'N/A'}</p>
             <p><strong>Fornecedor:</strong> ${chamado.nome_fornecedor || 'N/A'} (ID: ${chamado.fornecedor_id})</p>
@@ -748,6 +748,11 @@ async function abrirModalAcompanhamentosChamadoPag(chamadoId) {
 
         acompanhamentoChamadoPagIdInput.value = chamado.id;
         if (formNovoAcompanhamentoPag) formNovoAcompanhamentoPag.reset(); 
+        // Preenche o campo "Registrado por" do acompanhamento com o usuário logado
+        const usuarioAcompanhamentoInput = document.getElementById('acompanhamento-pag-usuario');
+        if (usuarioAcompanhamentoInput && currentUser) {
+            usuarioAcompanhamentoInput.value = currentUser.username;
+        }
         
         acompanhamentosChamadoPagLista.innerHTML = '';
         if (chamado.acompanhamentos && chamado.acompanhamentos.length > 0) {
@@ -785,7 +790,6 @@ if (formNovoAcompanhamentoPag) {
             usuario = currentUser.username;
         }
 
-
         if (!descricao.trim()) {
             showToast("A descrição do acompanhamento não pode ser vazia.", "error");
             return;
@@ -795,7 +799,7 @@ if (formNovoAcompanhamentoPag) {
             const response = await fetch(`${API_URL_PAGAMENTOS}/${chamadoId}/acompanhamentos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ descricao: descricao, usuario: usuario || null }), // Envia o usuário determinado
+                body: JSON.stringify({ descricao: descricao, usuario: usuario }), // Envia o usuário determinado
                 credentials: 'include'
             });
             hideLoading();
@@ -996,8 +1000,13 @@ async function abrirModalAcompanhamentosChamadoDiv(chamadoId) {
         if (chamado.valor !== null && chamado.valor !== undefined) { 
             valorInfoHtml = `<p><strong>Valor:</strong> R$ ${chamado.valor.toFixed(2).replace('.', ',')}</p>`;
         }
+        let ownerInfoHtml = ''; // Para mostrar quem registrou o chamado original
+        if (chamado.owner_username) {
+            ownerInfoHtml = `<p><strong>Registrado por (Chamado Original):</strong> ${chamado.owner_username}</p>`;
+        }
         acompanhamentosChamadoDivInfo.innerHTML = `
             <p><strong>ID do Chamado:</strong> ${chamado.id}</p>
+            ${ownerInfoHtml}
             <p><strong>N° Chamado Externo:</strong> ${chamado.numero_chamado_origem || 'N/A'}</p>
             ${fornecedorInfoHtml}
             ${valorInfoHtml}
@@ -1009,7 +1018,7 @@ async function abrirModalAcompanhamentosChamadoDiv(chamadoId) {
         acompanhamentoChamadoDivIdInput.value = chamado.id;
         if(formNovoAcompanhamentoDiv) formNovoAcompanhamentoDiv.reset();
         const usuarioAcompanhamentoDiv = document.getElementById('acompanhamento-div-usuario');
-        if(usuarioAcompanhamentoDiv && currentUser) usuarioAcompanhamentoDiv.value = currentUser.username;
+        if(usuarioAcompanhamentoDiv && currentUser) usuarioAcompanhamentoDiv.value = currentUser.username; // Preenche com usuário logado
         
         acompanhamentosChamadoDivLista.innerHTML = '';
         if (chamado.acompanhamentos && chamado.acompanhamentos.length > 0) {
@@ -1056,7 +1065,7 @@ if (formNovoAcompanhamentoDiv) {
             const response = await fetch(`${API_URL_DIVERSOS}/${chamadoId}/acompanhamentos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ descricao: descricao, usuario: usuario || null }),
+                body: JSON.stringify({ descricao: descricao, usuario: usuario }), // Envia o usuário determinado
                 credentials: 'include'
             });
             hideLoading();
@@ -1319,10 +1328,12 @@ function aplicarOrdenacao(items, sortOption) {
         let valA = a[key];
         let valB = b[key];
 
+        // Tratamento para campos que podem ser de objetos aninhados (ex: nome_fornecedor em chamados)
         if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor; 
         if(key === 'nome_fornecedor' && b.nome_fornecedor) valB = b.nome_fornecedor;
         if(key === 'owner_username' && a.owner_username) valA = a.owner_username; 
         if(key === 'owner_username' && b.owner_username) valB = b.owner_username;
+
 
         if (key && key.startsWith('data_') && valA && valB) {
             valA = new Date(valA);
@@ -1448,8 +1459,8 @@ if (navLinks && contentSections) {
             event.preventDefault();
             const targetId = link.getAttribute('data-target');
             
-            if (!currentUser && targetId !== 'auth-section-placeholder') { // Se não logado e não é a tela de placeholder
-                 if(targetId !== 'modal-login' && targetId !== 'modal-register') { // Permite abrir modais de login/registro
+            if (!currentUser && targetId !== 'auth-section-placeholder') { 
+                 if(targetId !== 'modal-login' && targetId !== 'modal-register') { 
                     showToast("Por favor, faça login para acessar esta área.", "error"); 
                     return;
                  }
@@ -1520,6 +1531,29 @@ function setupGlobalEventListeners() {
     if(formEditUserRole) formEditUserRole.addEventListener('submit', handleEditUserRoleSubmit);
     if(btnCloseModalEditUserRole) btnCloseModalEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none'; adminEditUserId = null;});
     if(btnCancelEditUserRole) btnCancelEditUserRole.addEventListener('click', () => {if(modalEditUserRole) modalEditUserRole.style.display = 'none'; adminEditUserId = null;});
+
+    // Link da Logo
+    const logoLink = document.getElementById('logo-link');
+    if (logoLink) {
+        logoLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (currentUser) { 
+                const firstTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
+                if (firstTabLink) {
+                    firstTabLink.click(); 
+                }
+            } else { 
+                // Se não logado, poderia apenas recarregar a página ou mostrar o modal de login
+                if (modalLogin && modalLogin.style.display !== 'block') {
+                     modalLogin.style.display = 'block';
+                     if(formLogin) formLogin.reset();
+                     if(loginErrorMessage) loginErrorMessage.style.display = 'none';
+                } else if (!modalLogin) {
+                    window.location.reload(); // Fallback
+                }
+            }
+        });
+    }
 }
 
 function init() {
@@ -1585,23 +1619,22 @@ function renderizarTabelaAdminUsers(users, page = 1) {
                 <td data-label="Email">${user.email}</td>
                 <td data-label="Papel">${user.role}</td>
                 <td class="actions-user">
-                    ${user.id !== currentUser.id ? 
+                    ${user.id !== currentUser.id && user.username !== 'aslima' ?  // Protege "aslima" também
                     `<button class="btn btn-sm btn-warning btn-edit-user-role" data-id="${user.id}" data-username="${user.username}" data-role="${user.role}" title="Editar Papel">Editar Papel</button>
                      <button class="btn btn-sm btn-danger btn-delete-user" data-id="${user.id}" data-username="${user.username}" title="Deletar Usuário">Deletar</button>`
-                    : 'N/A (Você Mesmo)'}
+                    : (user.id === currentUser.id ? 'N/A (Você Mesmo)' : 'N/A (Admin Principal)')}
                 </td>
             `;
             corpoTabelaAdminUsers.appendChild(tr);
         });
     }
     
-    // Paginação para Admin Users Table - Certifique-se que 'pagination-admin-users' existe no HTML
-    const paginationContainerForAdmin = document.getElementById('pagination-admin-users');
-    if (paginationContainerForAdmin) { // Só chama se o container existir
+    const paginationContainerForAdmin = document.getElementById('pagination-admin-users'); 
+    if (paginationContainerForAdmin) { 
          setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', 
             (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)
         ); 
-    } else if (users.length > ITEMS_PER_PAGE_TABLE) { // Avisa se precisa de paginação mas o container não existe
+    } else if (users.length > ITEMS_PER_PAGE_TABLE) { 
         console.warn("Container de paginação 'pagination-admin-users' não encontrado no HTML para a tabela de admin.");
     }
 }

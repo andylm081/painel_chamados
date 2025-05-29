@@ -15,7 +15,9 @@
 
     <header>
         <div class="container">
-            <img src="img/MARCA-MAGNUM-TIRES-FINAL-2021-02-4.png" alt="Logo Magnum Tires" id="logo">
+            <a href="#" id="logo-link" title="Página Inicial">
+                <img src="img/MARCA-MAGNUM-TIRES-FINAL-2021-02-4.png" alt="Logo Magnum Tires" id="logo">
+            </a>
             <h1>Painel de Acompanhamento de Chamados</h1>
             <div id="auth-status" class="auth-status">
                 <button id="btn-show-login-modal" class="btn btn-secondary btn-sm">Login</button>
@@ -55,6 +57,7 @@
                     <div class="sort-controls">
                         <label for="sort-chamado-pag">Ordenar por:</label>
                         <select id="sort-chamado-pag" class="sort-select" data-list="lista-chamados-pagamento">
+                            <option value="data_criacao_registro_desc">Criação (Mais Recente)</option>
                             <option value="data_vencimento_desc">Vencimento (Mais Recente)</option>
                             <option value="data_vencimento_asc">Vencimento (Mais Antigo)</option>
                             <option value="numero_chamado_origem_asc">N° Chamado (A-Z)</option>
@@ -89,8 +92,9 @@
                     <div class="sort-controls">
                          <label for="sort-chamado-div">Ordenar por:</label>
                         <select id="sort-chamado-div" class="sort-select" data-list="lista-chamados-diversos">
-                            <option value="data_escrituracao_desc">Data (Mais Recente)</option>
-                            <option value="data_escrituracao_asc">Data (Mais Antiga)</option>
+                            <option value="data_criacao_registro_desc">Criação (Mais Recente)</option>
+                            <option value="data_escrituracao_desc">Data Ocorr. (Mais Recente)</option>
+                            <option value="data_escrituracao_asc">Data Ocorr. (Mais Antiga)</option>
                             <option value="numero_chamado_origem_asc">N° Chamado (A-Z)</option>
                         </select>
                     </div>
@@ -118,10 +122,10 @@
                     <table id="tabela-admin-users">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Papel (Role)</th>
+                                <th data-sortkey="id">ID <span class="sort-arrow"></span></th>
+                                <th data-sortkey="username">Username <span class="sort-arrow"></span></th>
+                                <th data-sortkey="email">Email <span class="sort-arrow"></span></th>
+                                <th data-sortkey="role">Papel (Role) <span class="sort-arrow"></span></th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -129,7 +133,8 @@
                             </tbody>
                     </table>
                 </div>
-                </section>
+                <div class="pagination-controls" id="pagination-admin-users"></div>
+            </section>
         </main>
     </div> 
     
@@ -145,15 +150,15 @@
                 <input type="hidden" id="chamado_pag_id_edicao">
                 <div class="form-group"><label for="nome_fornecedor_input_pag">Nome Fornecedor:</label><input type="text" id="nome_fornecedor_input_pag" name="nome_fornecedor_input" list="fornecedores-datalist" autocomplete="off" required><datalist id="fornecedores-datalist"></datalist><input type="hidden" id="fornecedor_id_hidden_pag" name="fornecedor_id"></div>
                 <div class="form-group"><label for="numero_identificacao_fornecedor_input_pag">N° ID Fornecedor (p/ novo):</label><input type="text" id="numero_identificacao_fornecedor_input_pag" name="numero_identificacao_fornecedor_input"></div>
-                <div class="form-group"><label for="numero_chamado_origem_pag">N° Chamado Externo:</label><input type="text" id="numero_chamado_origem_pag" name="numero_chamado_origem" required></div>
-                <div class="form-group"><label for="numero_fatura_pag">N° Fatura:</label><input type="text" id="numero_fatura_pag" name="numero_fatura" required></div>
-                <div class="form-group"><label for="lancamento_pag">Lançamento:</label><input type="text" id="lancamento_pag" name="lancamento"></div>
-                <div class="form-group"><label for="valor_pag">Valor (R$):</label><input type="number" step="0.01" id="valor_pag" name="valor" required placeholder="Ex: 1234.50"></div>
-                <div class="form-group"><label for="data_escrituracao_pag">Data Escrituração (Registro):</label><input type="date" id="data_escrituracao_pag" name="data_escrituracao"></div>
-                <div class="form-group"><label for="prazo_maximo_escrituracao_pag">Prazo Máx. Escrituração:</label><input type="date" id="prazo_maximo_escrituracao_pag" name="prazo_maximo_escrituracao"></div>
-                <div class="form-group"><label for="data_vencimento_pag">Data Vencimento:</label><input type="date" id="data_vencimento_pag" name="data_vencimento" required></div>
-                <div class="form-group"><label for="situacao_pag">Situação Inicial:</label><select id="situacao_pag" name="situacao" required><option value="Pendente">Pendente</option><option value="Em andamento">Em Andamento</option><option value="Pago">Pago</option><option value="Atrasado">Atrasado</option><option value="Cancelado">Cancelado</option></select></div>
-                <div class="form-group"><label for="observacoes_gerais_pag">Observações Iniciais:</label><textarea id="observacoes_gerais_pag" name="observacoes_gerais" rows="3"></textarea></div>
+                <div class="form-group"><label for="numero_chamado_origem_pag">N° Chamado Externo:</label><input type="text" id="numero_chamado_origem_pag" name="numero_chamado_origem_pag" required></div>
+                <div class="form-group"><label for="numero_fatura_pag">N° Fatura:</label><input type="text" id="numero_fatura_pag" name="numero_fatura_pag" required></div>
+                <div class="form-group"><label for="lancamento_pag">Lançamento:</label><input type="text" id="lancamento_pag" name="lancamento_pag"></div>
+                <div class="form-group"><label for="valor_pag">Valor (R$):</label><input type="number" step="0.01" id="valor_pag" name="valor_pag" required placeholder="Ex: 1234.50"></div>
+                <div class="form-group"><label for="data_escrituracao_pag">Data Escrituração (Registro):</label><input type="date" id="data_escrituracao_pag" name="data_escrituracao_pag"></div>
+                <div class="form-group"><label for="prazo_maximo_escrituracao_pag">Prazo Máx. Escrituração:</label><input type="date" id="prazo_maximo_escrituracao_pag" name="prazo_maximo_escrituracao_pag"></div>
+                <div class="form-group"><label for="data_vencimento_pag">Data Vencimento:</label><input type="date" id="data_vencimento_pag" name="data_vencimento_pag" required></div>
+                <div class="form-group"><label for="situacao_pag">Situação Inicial:</label><select id="situacao_pag" name="situacao_pag" required><option value="Pendente">Pendente</option><option value="Em andamento">Em Andamento</option><option value="Pago">Pago</option><option value="Atrasado">Atrasado</option><option value="Cancelado">Cancelado</option></select></div>
+                <div class="form-group"><label for="observacoes_gerais_pag">Observações Iniciais:</label><textarea id="observacoes_gerais_pag" name="observacoes_gerais_pag" rows="3"></textarea></div>
                 <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" id="btn-cancelar-modal-chamado-pag">Cancelar</button></div>
                 <p id="modal-chamado-pag-error-message" class="error-message" style="display:none;"></p>
             </form>
@@ -166,13 +171,13 @@
             <h2 id="modal-chamado-div-titulo">Registrar Chamado Div.</h2>
             <form id="form-registrar-editar-chamado-div">
                 <input type="hidden" id="chamado_div_id_edicao">
-                <div class="form-group"><label for="numero_chamado_origem_div">N° Chamado Externo:</label><input type="text" id="numero_chamado_origem_div" name="numero_chamado_origem" required></div>
+                <div class="form-group"><label for="numero_chamado_origem_div">N° Chamado Externo:</label><input type="text" id="numero_chamado_origem_div" name="numero_chamado_origem_div" required></div>
                 <div class="form-group"><label for="nome_fornecedor_input_div">Nome Fornecedor (opc.):</label><input type="text" id="nome_fornecedor_input_div" name="nome_fornecedor_input" list="fornecedores-datalist-div" autocomplete="off"><datalist id="fornecedores-datalist-div"></datalist><input type="hidden" id="fornecedor_id_hidden_div" name="fornecedor_id"></div>
                 <div class="form-group"><label for="numero_identificacao_fornecedor_input_div">N° ID Fornecedor (p/ novo):</label><input type="text" id="numero_identificacao_fornecedor_input_div" name="numero_identificacao_fornecedor_input"></div>
-                <div class="form-group"><label for="valor_div">Valor (R$) (opc.):</label><input type="number" step="0.01" id="valor_div" name="valor" placeholder="Ex: 123.45"></div>
-                <div class="form-group"><label for="data_escrituracao_div">Data Ocorrência/Criação Externa:</label><input type="date" id="data_escrituracao_div" name="data_escrituracao" required></div>
-                <div class="form-group"><label for="situacao_div">Situação Inicial:</label><select id="situacao_div" name="situacao" required><option value="Aberto">Aberto</option><option value="Em análise">Em Análise</option><option value="Pendente Informação">Pendente Informação</option><option value="Resolvido">Resolvido</option><option value="Fechado">Fechado</option></select></div>
-                <div class="form-group"><label for="observacoes_div">Observações Iniciais:</label><textarea id="observacoes_div" name="observacoes" rows="3"></textarea></div>
+                <div class="form-group"><label for="valor_div">Valor (R$) (opc.):</label><input type="number" step="0.01" id="valor_div" name="valor_div" placeholder="Ex: 123.45"></div>
+                <div class="form-group"><label for="data_escrituracao_div">Data Ocorrência/Criação Externa:</label><input type="date" id="data_escrituracao_div" name="data_escrituracao_div" required></div>
+                <div class="form-group"><label for="situacao_div">Situação Inicial:</label><select id="situacao_div" name="situacao_div" required><option value="Aberto">Aberto</option><option value="Em análise">Em Análise</option><option value="Pendente Informação">Pendente Informação</option><option value="Resolvido">Resolvido</option><option value="Fechado">Fechado</option></select></div>
+                <div class="form-group"><label for="observacoes_div">Observações Iniciais:</label><textarea id="observacoes_div" name="observacoes_div" rows="3"></textarea></div>
                 <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" id="btn-cancelar-modal-chamado-div">Cancelar</button></div>
                 <p id="modal-chamado-div-error-message" class="error-message" style="display:none;"></p>
             </form>
@@ -256,7 +261,7 @@
     </div>
 
     <div id="modal-edit-user-role" class="modal">
-        <div class="modal-content auth-modal">
+        <div class="modal-content auth-modal"> 
             <span class="close-button" id="close-modal-edit-user-role">&times;</span>
             <h2 id="modal-edit-user-role-titulo">Editar Papel do Usuário</h2>
             <form id="form-edit-user-role">
