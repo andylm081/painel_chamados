@@ -134,7 +134,7 @@ const ITEMS_PER_PAGE_CARDS = 6;
 const ITEMS_PER_PAGE_TABLE = 10;
 
 let currentPagePag = 1, currentPageDiv = 1, currentPageForn = 1, currentPageAdminUsers = 1;
-let currentSortPag = 'data_criacao_registro_desc', currentSortDiv = 'data_criacao_registro_desc';
+let currentSortPag = 'data_criacao_registro_desc', currentSortDiv = 'data_criacao_registro_desc'; 
 let currentSortForn = { key: 'nome_fornecedor', direction: 'asc' };
 let currentSortAdminUsers = { key: 'username', direction: 'asc' };
 let currentFiltersPag = {}, currentFiltersDiv = {}, currentFiltersForn = {}, currentFiltersAdminUsers = {};
@@ -463,6 +463,10 @@ function renderizarTabelaFornecedores(fornecedores, page = 1) {
                 </td>`;
             corpoTabelaFornecedores.appendChild(tr);
         });
+         // Garante que a coluna do proprietário seja exibida ou ocultada corretamente para o mestre
+        document.querySelectorAll('.owner-column-data').forEach(el => {
+            el.style.display = currentUser.role === 'master' ? '' : 'none';
+        });
     }
     setupPagination(fornecedores.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-fornecedores', 
         (newPage) => carregarErenderizarFornecedores(newPage, currentSortForn, currentFiltersForn)
@@ -491,7 +495,7 @@ if (formNovoEditarFornecedor) {
             if (!response.ok) { throw new Error(responseData.message || `HTTP Error: ${response.status}`); }
             fecharModalNovoEditarFornecedor();
             const targetPage = method === 'POST' ? 1 : currentPageForn;
-            currentFiltersForn = {}; 
+            currentFiltersForn = {}; // Reseta filtros ao criar/editar com sucesso
             document.querySelectorAll('.filter-input[data-list="corpo-tabela-fornecedores"]').forEach(fi => fi.value = '');
             carregarErenderizarFornecedores(targetPage, currentSortForn, currentFiltersForn);
             carregarFornecedoresGlobais(); 
@@ -527,11 +531,17 @@ if (corpoTabelaFornecedores) {
                         if (!response.ok) { throw new Error(data.message || `Erro ao excluir fornecedor: ${response.status}`); }
                         showToast('Fornecedor excluído com sucesso!', 'success');
                         
-                        // Tenta manter a página atual ou ir para a anterior se a atual ficar vazia
-                        let itemsNaPaginaAtual = Array.from(corpoTabelaFornecedores.querySelectorAll('tr')).filter(tr => !tr.querySelector('td[colspan]')).length;
+                        // Recalcula a página atual se necessário
+                        const totalItemsAposExclusao = todosFornecedoresCache.filter(f => f.id !== parseInt(fornecedorId)).length; 
+                        const totalPagesAposExclusao = Math.ceil(totalItemsAposExclusao / ITEMS_PER_PAGE_TABLE);
                         let paginaAlvo = currentPageForn;
-                        if(itemsNaPaginaAtual === 1 && currentPageForn > 1) { // Era o último item da página > 1
-                            paginaAlvo = currentPageForn - 1;
+
+                        if ( (currentPageForn * ITEMS_PER_PAGE_TABLE) - (ITEMS_PER_PAGE_TABLE -1 ) > totalItemsAposExclusao && currentPageForn > 1) {
+                           paginaAlvo = currentPageForn - 1;
+                        } else if (currentPageForn > totalPagesAposExclusao && totalPagesAposExclusao > 0) {
+                            paginaAlvo = totalPagesAposExclusao;
+                        } else if (totalItemsAposExclusao === 0){
+                             paginaAlvo = 1;
                         }
                         carregarErenderizarFornecedores(paginaAlvo, currentSortForn, currentFiltersForn);
                         carregarFornecedoresGlobais();
@@ -730,7 +740,7 @@ async function abrirModalAcompanhamentosChamadoPag(chamadoId) {
 
         acompanhamentosChamadoPagTitulo.textContent = `Acompanhamentos: ${chamado.numero_chamado_origem || 'N/A'}`;
         let ownerInfoHtml = '';
-        if (chamado.owner_username) { // Ajuste para mostrar quem registrou o chamado
+        if (chamado.owner_username) { // Mostra quem registrou o chamado original
             ownerInfoHtml = `<p><strong>Registrado por (Chamado Original):</strong> ${chamado.owner_username}</p>`;
         }
         acompanhamentosChamadoPagInfo.innerHTML = `
@@ -785,8 +795,8 @@ if (formNovoAcompanhamentoPag) {
         const usuarioInput = document.getElementById('acompanhamento-pag-usuario');
         
         const descricao = descricaoInput.value;
-        let usuario = usuarioInput.value.trim(); // Pega o valor do input
-        if(!usuario && currentUser) { // Se o input estiver vazio, usa o nome do usuário logado
+        let usuario = usuarioInput.value.trim(); 
+        if(!usuario && currentUser) { 
             usuario = currentUser.username;
         }
 
@@ -799,7 +809,7 @@ if (formNovoAcompanhamentoPag) {
             const response = await fetch(`${API_URL_PAGAMENTOS}/${chamadoId}/acompanhamentos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ descricao: descricao, usuario: usuario }), // Envia o usuário determinado
+                body: JSON.stringify({ descricao: descricao, usuario: usuario }), 
                 credentials: 'include'
             });
             hideLoading();
@@ -1328,12 +1338,10 @@ function aplicarOrdenacao(items, sortOption) {
         let valA = a[key];
         let valB = b[key];
 
-        // Tratamento para campos que podem ser de objetos aninhados (ex: nome_fornecedor em chamados)
         if(key === 'nome_fornecedor' && a.nome_fornecedor) valA = a.nome_fornecedor; 
         if(key === 'nome_fornecedor' && b.nome_fornecedor) valB = b.nome_fornecedor;
         if(key === 'owner_username' && a.owner_username) valA = a.owner_username; 
         if(key === 'owner_username' && b.owner_username) valB = b.owner_username;
-
 
         if (key && key.startsWith('data_') && valA && valB) {
             valA = new Date(valA);
@@ -1539,17 +1547,18 @@ function setupGlobalEventListeners() {
             event.preventDefault();
             if (currentUser) { 
                 const firstTabLink = document.querySelector('nav ul li a[data-target="chamados-pagamento-section"]');
-                if (firstTabLink) {
+                if (firstTabLink && !firstTabLink.classList.contains('active')) { // Só clica se não estiver ativa
                     firstTabLink.click(); 
+                } else if (firstTabLink && firstTabLink.classList.contains('active')) { // Se já está ativa, apenas recarrega os dados dela
+                    buscarChamadosPagamento();
                 }
             } else { 
-                // Se não logado, poderia apenas recarregar a página ou mostrar o modal de login
                 if (modalLogin && modalLogin.style.display !== 'block') {
                      modalLogin.style.display = 'block';
                      if(formLogin) formLogin.reset();
                      if(loginErrorMessage) loginErrorMessage.style.display = 'none';
                 } else if (!modalLogin) {
-                    window.location.reload(); // Fallback
+                    window.location.reload(); 
                 }
             }
         });
@@ -1619,7 +1628,7 @@ function renderizarTabelaAdminUsers(users, page = 1) {
                 <td data-label="Email">${user.email}</td>
                 <td data-label="Papel">${user.role}</td>
                 <td class="actions-user">
-                    ${user.id !== currentUser.id && user.username !== 'aslima' ?  // Protege "aslima" também
+                    ${user.username !== 'aslima' && user.id !== currentUser.id ? // Protege "aslima" e o próprio mestre de auto-edição de papel/deleção aqui
                     `<button class="btn btn-sm btn-warning btn-edit-user-role" data-id="${user.id}" data-username="${user.username}" data-role="${user.role}" title="Editar Papel">Editar Papel</button>
                      <button class="btn btn-sm btn-danger btn-delete-user" data-id="${user.id}" data-username="${user.username}" title="Deletar Usuário">Deletar</button>`
                     : (user.id === currentUser.id ? 'N/A (Você Mesmo)' : 'N/A (Admin Principal)')}
@@ -1629,13 +1638,14 @@ function renderizarTabelaAdminUsers(users, page = 1) {
         });
     }
     
-    const paginationContainerForAdmin = document.getElementById('pagination-admin-users'); 
+    // Paginação para Admin Users Table - Certifique-se que 'pagination-admin-users' existe no HTML
+    const paginationContainerForAdmin = document.getElementById('pagination-admin-users');
     if (paginationContainerForAdmin) { 
          setupPagination(users.length, ITEMS_PER_PAGE_TABLE, page, 'pagination-admin-users', 
             (newPage) => carregarErenderizarAdminUsers(newPage, currentSortAdminUsers, currentFiltersAdminUsers)
         ); 
-    } else if (users.length > ITEMS_PER_PAGE_TABLE) { 
-        console.warn("Container de paginação 'pagination-admin-users' não encontrado no HTML para a tabela de admin.");
+    } else if (users.length > ITEMS_PER_PAGE_TABLE && !paginationAdminUsersDiv) { // Avisa se precisa de paginação mas o container não existe
+        console.warn("Container de paginação 'pagination-admin-users' não encontrado no HTML para a tabela de admin, mas há itens suficientes para paginar.");
     }
 }
 
